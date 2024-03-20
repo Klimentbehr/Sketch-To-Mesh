@@ -17,7 +17,7 @@ Features:
 
 Installation :
 - First, the user must have Blender Installed.
-- Once Blender is installed the user must download the Sketc-to-Mesh file and save it in a place they can find again
+- Once Blender is installed the user must download the Sketch-to-Mesh file and save it in a place they can find again
 - Open Blender navigation to the Edit tab and then navigate to the Preferences button at the bottom
 - Once the preference tab is open navigate to the Add-On tab
 - Once in the add-On tab click the install button select the Sketch-To-Mesh Folder and press Install Add-on
