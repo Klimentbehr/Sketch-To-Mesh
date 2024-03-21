@@ -2,12 +2,14 @@ import bpy
 import os
 import math
 import cv2
+import io
+import tempfile
 from .image_processing import PlaneItem
-
+from .file_conversion import blend_opener, fbx_opener
+from .DepthByColor import GenerateEdges, NormaliseData, GenerateShapeEdges
 
 def saveObj():
-    filepath = os.path.abspath("ExportFolder\\TempExport.fbx")
-
+    filepath = os.path.abspath("ExportFolder\\" + bpy.context.scene.FileName_Input + ".fbx"  )
     bpy.ops.object.select_all()
     bpy.ops.export_mesh.stl(filepath=filepath,  check_existing=True, use_selection=True)
     filepathAndName = (filepath, os.path.basename(filepath) )
@@ -47,6 +49,7 @@ def DefinePixels(image, Color, Direction):
         case "MiddleRight" : CurrRangePair = (range(halfImageData[1] -1), range(halfImageData[0]- 1 ))
         case "MiddleLeft": CurrRangePair = (range(halfImageData[1] -1), range(imagedata[0] - halfImageData[0]-  1 ))
         case "Vertical": CurrRangePair =  (range(imagedata[1] -1), range(imagedata[0]-1))
+
     row = 0; column = 0
     if (Direction == "Right" or Direction == "MiddleRight"):
         base = (imagedata[0] - halfImageData[0] - 1) if  Direction == "MiddleRight" else 0
@@ -111,9 +114,9 @@ def DefinePixels(image, Color, Direction):
                 
     return PixelsList
 
-def SpaceOutPixels(ColorWeAreLookingFor, PolyCount, plane:PlaneItem):
-    ImageDictionary = GetlistOfPixels(ColorWeAreLookingFor, plane)
-    FullVertList = {} #new dictionary that spaces out the points
+
+def SpaceOutPixels(ImageDictionary, PolyCount):
+    FullVertList = {} #new dictionary to 
 
     for Sides in ImageDictionary:
         NextIter = 1 # keeps count of the value we are on, so we can get the next value in the list
@@ -130,13 +133,15 @@ def SpaceOutPixels(ColorWeAreLookingFor, PolyCount, plane:PlaneItem):
             
             elif GetDistanceBetweenPoints(ImageDictIter[NextIter][0], ImageDictIter[CurrIter][0], ImageDictIter[NextIter][1], ImageDictIter[CurrIter][1]) >= PolyCount: VertList.append(ImageDictIter[NextIter]) # we save the next vertex into the VertList
 
-            del ImageDictIter[0]
+            NextIter = NextIter + 1        
         FullVertList[Sides] = VertList
     return FullVertList
     
-def NormaliseVertList(ColorWeAreLookingFor, PolyCount, plane):
-    FullVertList = SpaceOutPixels(ColorWeAreLookingFor, PolyCount, plane)
-    xArray = []; yArray = [] #These two arrays will hold the positions of the x points and the y values respectively
+def GetZAxisByColor(FullVertList, PolyCount, plane:PlaneItem):
+    return GenerateShapeEdges(FullVertList, PolyCount, plane )#polycount is our radius
+
+def NormaliseVertList(FullVertList):
+    xArray = []; yArray = []
 
     #since we know that there are only are only 4 sides in the FullVertList we can add all of the points into a new list
     for VertList in FullVertList:
@@ -152,50 +157,30 @@ def NormaliseVertList(ColorWeAreLookingFor, PolyCount, plane):
     for count in range(xArray.__len__()): NarrowedNormalisedVertList.append(((xArray[count]), (yArray[count]), (1.0))) # we add the one into the list so the list will have the Z coordinate.
     #Blender doesn't like dictionaries so we have to create a tuple in order to store the X,Y, and Z coordinates
     NewNarrowList = tuple(NarrowedNormalisedVertList)
-    # sortedNarrowList = OrderVertMesh(NewNarrowList)
-    return NewNarrowList
+    return NewNarrowList   
 
-def NormaliseData(List:list):
-    #This list sets the data to either 0 or 1
-    NewList = []
-    if not List: return False
-    else: 
-        for element in List:  
-            norm = (element - min(List)) / (max(List) - min(List))
-            NewList.append(norm)
-    return NewList
-
-def CreateEdges(ColorWeAreLookingFor, PolyCount, plane:PlaneItem):
-    MeshStructure = {}
-    VertList = NormaliseVertList(ColorWeAreLookingFor, PolyCount, plane)
+def CreateEdges(VertList):
     if VertList == False:  return False #ends the function before any extra work is done
 
-    MeshStructure[0] = VertList
-    edgeList:list =[]
-    iterator = 1
+    MeshStructure = GenerateEdges(VertList, "BlenderPoints")
 
-    for verts in range(VertList.__len__()): #this will get the vertical edges for the mesh.
-        if iterator >=  VertList.__len__(): 
-            edgeList.append((iterator -1, 0))
-            # iterator = iterator + 1
-        else:
-            edgeList.append((verts, iterator))
-            iterator = iterator + 1
-    MeshStructure[1] = edgeList
-    # We also need to get the horizontal. But maybe later
     MeshStructure[2] = [] #this will hold the faces
     return MeshStructure
 
-def DrawMeshToScreen(ColorWeAreLookingFor, PolyCount, self, plane:PlaneItem):
-    MeshStructure = CreateEdges(ColorWeAreLookingFor, PolyCount, plane)
+def DrawMeshToScreen(MeshStructure, self):
     if MeshStructure == False:
         self.report({'ERROR'}, "Invalid Image") 
     else:
         # make mesh
         new_mesh = bpy.data.meshes.new('new_mesh')
-        
         new_mesh.from_pydata(MeshStructure[0], MeshStructure[2], MeshStructure[1])
         new_mesh.update()
+
+        if not new_mesh.edges:
+            edges = MeshStructure[1] # Define edges here based on your vertices
+            new_mesh.from_pydata(MeshStructure[0], edges, MeshStructure[1])
+            new_mesh.update()
+
         # make object from mesh
         new_object = bpy.data.objects.new('Sketch_to_Mesh_mesh', new_mesh)
         # make collection
@@ -204,9 +189,51 @@ def DrawMeshToScreen(ColorWeAreLookingFor, PolyCount, self, plane:PlaneItem):
         # add object to scene collection
         new_collection.objects.link(new_object)
 
-def DrawAllMeshesToScreen(ColorWeAreLookingFor, PolyCount, self, PlaneArray:list[PlaneItem]):
+#Draws all the non Complex meshes to screen 
+def DrawMeshesToScreen(ColorWeAreLookingFor, PolyCount, self, PlaneArray:list[PlaneItem], isComplex):
     for plane in PlaneArray:
-        DrawMeshToScreen(ColorWeAreLookingFor, PolyCount, self, plane)
+        ImageDictionary = GetlistOfPixels(ColorWeAreLookingFor, plane)
+        FullVertList = SpaceOutPixels(ImageDictionary, PolyCount)
+
+        if isComplex == True: #only happens when complex is called
+            VertList = NormaliseVertList(FullVertList)
+            MeshStructure = CreateEdges(VertList)
+        else:  MeshStructure = GetZAxisByColor(FullVertList, PolyCount * 10, plane) #only called when not complex is called
+
+        #draws all the meshes to screen
+        DrawMeshToScreen(MeshStructure, self)
+
+# TODO: return something that is not 0. case handling and error handling, as well as completed and noncompleted states.
+def encode_file(file_path):
+    
+   with open(file_path, "rb") as file:
+        blend_file_contents = io.BytesIO(file.read())
+        return blend_file_contents
+
+# TODO: return something that is not 0. case handling and error handling, as well as completed and noncompleted states.
+def decode_file(data, file_extension):
+    #Apparently the data doesn't need to be decoded so we will handle the different
+    #file extensions handled here instead of outside the file_conversion.py file
+
+    #write the data into a temporary file
+    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=file_extension) #we'll probably have to add another parameter here for the file extension or soemthing else)
+    temp_file.write(data)
+    temp_file.close()
+
+    #Deal with the separate file extensions
+    match file_extension :
+        case ".blend":
+            blend_opener(temp_file.name)
+        case ".fbx":
+            fbx_opener(temp_file.name)
+        case _: #defualt case # if there is an image file
+            bpy.ops.import_image.to_plane(files=[{"name":temp_file.name, "name":temp_file.name}], directory="", relative=False)
+
+    #remove the temp file
+    os.unlink(temp_file.name)
+
+    #if we are returning just the file back then cases checking will have to happen outside of this method
+    return 0
 
 def GetDistanceBetweenPoints(X2, X1, Y2, Y1): #supporting function that just does the distance formula
     return math.sqrt(((X2-X1)**2) + ((Y2-Y1)**2))

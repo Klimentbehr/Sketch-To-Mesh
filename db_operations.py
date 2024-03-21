@@ -4,7 +4,7 @@ from pymongo.errors import DuplicateKeyError
 from bson import ObjectId # unsure if needed
 import os
 
-from .file_conversion import encode_file, decode_file
+from .blender_operations import encode_file, decode_file
 from .db_entities import create_file_document, create_user_document
 
 def connect_to_db():
@@ -139,9 +139,6 @@ def get_user_by_email(user_email):
     db.client.close()
 
     return user
-
-
-
 
 
 # run the test when this module is executed
