@@ -5,21 +5,10 @@ import blf
 import bpy.types
 from os import path
 import numpy as np
-from dataclasses import dataclass
+
 from .image_processing import Feature_detection, PlaneItem
-from .blender_operations import DrawAllMeshesToScreen
+from .blender_operations import DrawMeshesToScreen
 
-
-@dataclass
-class UserData:
-    UserSignedIn = False
-    user_info = []
-    user_documents = []
-    def __init__(self, SignIn):
-        self.user_info = []
-        self.user_documents = [] # testing
-        self.UserSignedIn = SignIn
-User: UserData = UserData(False)
 GlobalPlaneDataArray : list[PlaneItem] = [] # this will eventually replace the two array under this
 
 def draw_callback_px(self, context, message):
@@ -85,7 +74,6 @@ class VIEW3D_PT_Sketch_To_Mesh_Views_FilePath_Panel(bpy.types.Panel):
         layout = self.layout
         row = layout.row()
         layout.operator("object.add_plane_item", text="Add Image")
-
         box = layout.box()
 
         # List current plane items
@@ -134,10 +122,10 @@ class Reset_Input_Images(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class TestPlaceMesh(bpy.types.Operator):
+class PlaceMesh(bpy.types.Operator):
     bl_idname = "wm.place_mesh"
     bl_label ="Place Mesh"
 
     def execute(self, context):
-        DrawAllMeshesToScreen((0, 255, 0), 5, self, GlobalPlaneDataArray)
+        DrawMeshesToScreen((0, 255, 0), 5, self, GlobalPlaneDataArray, bpy.context.scene.IsComplex)
         return {'FINISHED'}
