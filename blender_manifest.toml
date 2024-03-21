@@ -6,7 +6,7 @@ version = "0.0.1"
 blender_version_min = "4.2.0"
 type = "add-on"
 maintainer = "Judah, Kell, James, Rafael"
-license = "SPDX:GPL-2.0"
+license = ""
 
 # Additional URLs
 wiki_url = "https://github.com/Klimentbehr/Sketch-To-Mesh#readme"
