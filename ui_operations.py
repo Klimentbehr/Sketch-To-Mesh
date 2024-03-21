@@ -14,14 +14,15 @@ from bpy.types import Operator, Panel
 
 @dataclass
 class PlaneItem:
-    PlaneFilepath = bpy.props.StringProperty(name="File Path", subtype='FILE_PATH')
-    PlaneRotation = bpy.props.IntProperty(name="Rotation", default=0)
-    ImagePlaneName: str
-    ImagePlaneFilePath: str
-    
-    def __init__(self, filepath ,rotation):
+    PlaneFilepath: bpy.props.StringProperty(name="File Path", subtype='FILE_PATH')
+    PlaneRotation: bpy.props.IntProperty(name="Rotation", default=0)
+    ImagePlaneName: str = ""
+    ImagePlaneFilePath: str = ""
+    isSymmetrical: bool = False
+    def __init__(self, filepath, rotation,  isSymmetrical=False):
         self.PlaneFilepath = filepath
         self.PlaneRotation = rotation
+        self.isSymmetrical = isSymmetrical
 
 
 @dataclass
