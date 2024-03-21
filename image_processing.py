@@ -211,7 +211,7 @@ def PlaceImage(self, GlobalPlaneDataArray:list[PlaneItem] ):
                 
                 if plane_data.ImagePlaneFilePath:
                     filename = os.path.basename(plane_data.ImagePlaneFilePath)
-                    FileDirectory = plane_data.ImagePlaneFilePath[: plane_data.ImagePlaneFilePath.rfind("\\")] + "\\"
+                    FileDirectory = r"" + plane_data.ImagePlaneFilePath[: plane_data.ImagePlaneFilePath.rfind("\\")] + "\\"
                     #bpy.ops.import_image.to_plane(files=[{"name":filename, "name":filename}], directory=FileDirectory, relative=False)
                     bpy.ops.import_image.to_plane(files=[{"name":filename, "name":filename}], directory=FileDirectory, relative=False)
                     #we set the rotation and location of each plane
