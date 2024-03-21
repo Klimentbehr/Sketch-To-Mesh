@@ -55,13 +55,16 @@ def DefinePixels(image, Color, Direction):
                 if row == imagedata[1]: break
                 elif column == imagedata[0]: row = row + 1; column = base   # if we get to the end of the row, row is increase to get to the next row and column is reset
                 elif (int(image[column, row][0]), int(image[column, row][1]), int(image[column, row][2])) == Color: # if we find the color green 
-                    if (PixelsList.__len__ == 0): PixelsList.append((column, row)) #If the pixel list is empty then it is the first pixel to be added
+                    if (len(PixelsList) == 0): PixelsList.append((column, row)) #If the pixel list is empty then it is the first pixel to be added
                     else: #any subsequent pixels will need to be checked to make sure that they are within acceptable distance from one another
                         if (abs(PixelsList[PixelIter][0] - column) < 50 or (abs(PixelsList[PixelIter][1] - row) < 50)):
                             PixelsList.append((column, row)) #if we find a pixel we are looking for we add it to the pixel List
                             row = row + 1; column = base  #row is increase to get to the next row and column is reset
                             PixelIter = PixelIter + 1 #set the PixelIter to the pixel that was just added
-                        else: continue
+                        else: 
+                            row = row + 1
+                            column = base
+                            continue
                 elif row * column >= (imagedata[0] + 1) * (imagedata[1]+ 1): break
                 column = column + 1
 
@@ -72,13 +75,16 @@ def DefinePixels(image, Color, Direction):
                 if row == imagedata[1]: break # we need to take the absoulte value of the column alot through this loop
                 elif abs(column) == imagedata[0]: row = row + 1; column = base # if we get to the end of the row, row is increase to get to the next row and column is reset
                 elif (int(image[abs(column), row][0]), int(image[abs(column), row][1]), int(image[abs(column), row][2])) == Color: # if we find the color green 
-                    if (PixelsList.__len__ == 0): PixelsList.append((abs(column), row)) #If the pixel list is empty then it is the first pizel to be added
+                    if (len(PixelsList) == 0): PixelsList.append((abs(column), row)) #If the pixel list is empty then it is the first pizel to be added
                     else: #any subsequent pixels will need to be checked to make sure that they are within acceptable distance from one another
                         if (abs(PixelsList[PixelIter][0] - column) < 50 or (abs(PixelsList[PixelIter][1] - row) < 50)):
                             PixelsList.append((abs(column), row)) # if we find a pixel we are looking for we add it to the pixel List
                             row = row + 1; column = base  #row is increase to get to the next row and column is reset
                             PixelIter = PixelIter + 1 #set the PixelIter to the pixel that was just added
-                        else: continue
+                        else: 
+                            row = row + 1
+                            column = base
+                            continue
                 elif abs(row * column) >= abs((imagedata[0] + 1) * (imagedata[1]+ 1)): break
                 column = column - 1
 
@@ -89,13 +95,16 @@ def DefinePixels(image, Color, Direction):
                 if column == imagedata[0]: break #since we are doing vertical and not horizontal we need to check for column and not row
                 elif row == imagedata[1]: column = column + 1; row = base #again this is the inverse since it is vertical
                 elif (int(image[column, row][0]), int(image[column, row][1]), int(image[column, row][2])) == Color: #color checking is the same
-                    if (PixelsList.__len__ == 0): PixelsList.append((column, row)) #If the pixel list is empty then it is the first pixel to be added
+                    if (len(PixelsList) == 0): PixelsList.append((column, row)) #If the pixel list is empty then it is the first pixel to be added
                     else: #any subsequent pixels will need to be checked to make sure that they are within acceptable distance from one another
-                        if (abs((PixelsList[-1])[0] - column) < 50 or (abs((PixelsList[-1])[1] - row) < 50)):
+                        if (abs((PixelsList[PixelIter])[0] - column) < 50 or (abs((PixelsList[PixelIter])[1] - row) < 50)):
                             PixelsList.append((column, row)) # if we find a pixel we are looking for we add it to the pixel List
                             column = column + 1; row = base #column is increased to get to the next row and column
                             PixelIter = PixelIter + 1 #set the PixelIter to the pixel that was just added
-                        else: continue
+                        else: 
+                            column = column + 1
+                            row = base
+                            continue
                 elif row * column >= ((imagedata[0] + 1) * (imagedata[1] + 1)): break
                 row = row + 1
 
@@ -111,20 +120,17 @@ def SpaceOutPixels(ColorWeAreLookingFor, PolyCount, plane:PlaneItem):
         CurrIter = 0
         VertList: list = [] #the vertList saves the verts that are out of the poly count distance. The vert list is kept here so it will be reset fro each side
         done = False
+        ImageDictIter = (ImageDictionary[Sides]) # creates a varible to short formulas
         while not done:
-            ImageDictIter = (ImageDictionary[Sides]) # creates a varible to short formulas
-            XDistance = abs((ImageDictIter[NextIter][0] - ImageDictIter[CurrIter][0])^2) # gets the X part of the Distance formula
-            YDistance = abs(((ImageDictIter[NextIter])[1] - ImageDictIter[CurrIter][1])^2) # gets the Y part of the Distance formula
-
-            if (NextIter == ImageDictIter.__len__() -1):
-                VertList.append(ImageDictIter[NextIter]) # we add the last vertex to the list 
+            if (NextIter == len(ImageDictIter)):
+                VertList.append(ImageDictIter[CurrIter]) # we add the last vertex to the list 
                 done = True; break # sets done to true so the while loop will end
             
-            elif math.sqrt(XDistance + YDistance) >= PolyCount : 
-                VertList.append(ImageDictIter[NextIter]) # we save the next vertex into the VertList
-                CurrIter = NextIter # we get to the new vertex so we can find the point after
+            if (abs(ImageDictIter[CurrIter][0] - ImageDictIter[NextIter][0]) > 50 or (abs(ImageDictIter[CurrIter][1] - ImageDictIter[NextIter][1]) > 50)): ImageDictIter = SearchForClosestPoint(ImageDictIter, ImageDictIter[CurrIter])
+            
+            elif GetDistanceBetweenPoints(ImageDictIter[NextIter][0], ImageDictIter[CurrIter][0], ImageDictIter[NextIter][1], ImageDictIter[CurrIter][1]) >= PolyCount: VertList.append(ImageDictIter[NextIter]) # we save the next vertex into the VertList
 
-            NextIter = NextIter + 1
+            del ImageDictIter[0]
         FullVertList[Sides] = VertList
     return FullVertList
     
@@ -168,9 +174,9 @@ def CreateEdges(ColorWeAreLookingFor, PolyCount, plane:PlaneItem):
     edgeList:list =[]
     iterator = 1
 
-    for verts in range(VertList.__len__()-1): #this will get the vertical edges for the mesh.
-        if iterator >=  VertList.__len__()-1: 
-            edgeList.append((0, iterator))
+    for verts in range(VertList.__len__()): #this will get the vertical edges for the mesh.
+        if iterator >=  VertList.__len__(): 
+            edgeList.append((iterator -1, 0))
             # iterator = iterator + 1
         else:
             edgeList.append((verts, iterator))
@@ -202,5 +208,21 @@ def DrawAllMeshesToScreen(ColorWeAreLookingFor, PolyCount, self, PlaneArray:list
     for plane in PlaneArray:
         DrawMeshToScreen(ColorWeAreLookingFor, PolyCount, self, plane)
 
-def CheckSpaceBetweenPoints(X2, X1, Y2, Y1):
-    return math.sqrt(((X2-X1)^2) + ((Y2-Y1)^2))
+def GetDistanceBetweenPoints(X2, X1, Y2, Y1): #supporting function that just does the distance formula
+    return math.sqrt(((X2-X1)**2) + ((Y2-Y1)**2))
+
+def SearchForClosestPoint(PointArray, startingPoint):
+    closestDistance = 100 #will be used to check the distance between two points
+    tempIter = 0 #will loop thought the for each loop and hold a temp Iterator
+    finalIter = 0 #will hold the iterator of the closest point
+    for point in PointArray:
+        TempDistance = abs(GetDistanceBetweenPoints(point[0], startingPoint[0], point[1], startingPoint[1])) #get the distance between the 
+        if(TempDistance == 0):continue #If the tempDistance ends up being 0 then that means they are the exact same distance 
+        elif(TempDistance < closestDistance): #if the distance is shorter that the current shortest distance then change the shortest distance to the new distance
+            finalIter = tempIter #also set the finalIter to the shortest distance Iterator
+            closestDistance = TempDistance
+        tempIter = tempIter + 1
+
+    NewList: list = PointArray[finalIter:] #adjust the list so that the closest points are now first in the list
+    NewList.extend(PointArray[:finalIter]) #adjust the list so that the further points are now after the closest points
+    return NewList
