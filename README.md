@@ -59,5 +59,12 @@ Contributors:
 
 Project :
   Pre-alpha
+  Github: https://github.com/Klimentbehr/Sketch-To-Mesh/
 
+  
 Thank you for downloading Sketch-To-Mesh!
+
+
+
+
+
