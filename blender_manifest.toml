@@ -1,12 +1,17 @@
-[bl_info]
+schema_version = "1.0"
+id = "sketch_to_mesh"
 name = "Sketch-To-Mesh"
-author = "Judah, Kell, James, Rafael"
-version = [1, 0, 0]
-blender = [4, 0, 0]
-location = "View3D > Toolbar > Sketch To Mesh Panel"
-description = "Converts sketch images into 3D mesh models using OpenCV."
-warning = ""
+tagline = "Converts sketch images into 3D mesh models using OpenCV."
+version = "0.0.1"
+blender_version_min = "4.0.0"
+type = "Object"
+maintainer = "Judah, Kell, James, Rafael"
+license = "GPL-3.0"
+
+# Additional URLs
 wiki_url = "https://github.com/Klimentbehr/Sketch-To-Mesh#readme"
 tracker_url = "https://github.com/Klimentbehr/Sketch-To-Mesh/issues"
+
+# Other metadata
 support = "COMMUNITY"
-category = "Object"
+category = "Tool"
