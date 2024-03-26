@@ -418,13 +418,12 @@ def SaveImage(image, plane:PlaneItem):
     os.chdir("..\\") #goes back one directory   
 
 
-def CheckForInsideLines(EdgeList:dict, radius, image, Color):
-    for points in EdgeList:
-        ConfirmedPoints = CalculateCircumference(radius, points, image, Color)
-        for ConfirmedPoints in ConfirmedPoints:
-            lastPointOnLine = CheckLineDst(ConfirmedPoints, points)
-            if EdgeList.get(lastPointOnLine): break
-            else: CheckForInsideLines(EdgeList, radius, image, Color)
+def CheckForInsideLines(EdgeList:dict, edgePoint:list, radius:int, image, Color:list):
+    ConfirmedPoints = CalculateCircumference(radius, EdgeList[edgePoint], image, Color)
+    for ConfirmedPoints in ConfirmedPoints:
+        lastPointOnLine = CheckLineDst(ConfirmedPoints, EdgeList[edgePoint])
+        if EdgeList.get(lastPointOnLine): break
+        else: CheckForInsideLines(EdgeList, radius, image, Color)
 
 
 def CalculateCircumference(radius:int, center:list, image, Color):
@@ -493,13 +492,11 @@ def ColorCheck(image, point, Color):
         ReturnBool = True
     return ReturnBool
         
-
 def LineCheck(pointWeAreChecking, slope, Yintercept):
     ReturnBool = False
     calculatedYvalue = round(slope * pointWeAreChecking[0] + Yintercept)
     if calculatedYvalue == pointWeAreChecking[1]: ReturnBool =True
     return ReturnBool
-
 
 def calucalateYIntercept(Point, slope):
     return( Point[1] - (Point[0] * slope) )
