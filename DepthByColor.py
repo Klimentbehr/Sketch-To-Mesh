@@ -6,6 +6,7 @@ from threading import Thread, Lock
 from dataclasses import dataclass
 
 mutex = Lock()
+meshMidpoint = None
 
 @dataclass
 class EdgeData:
@@ -25,8 +26,8 @@ class EdgeData:
         self.slope = GetSlope(Point, NextPoint) #gets the slope of each edge
         self.Yintercept = calucalateYIntercept(Point, self.slope )
 
-    def __init__(self, CurrPoint):
-        self.CurrPoint = CurrPoint
+    # def __init__(self, CurrPoint):
+        # self.CurrPoint = CurrPoint
 #starts from space out pixels
 def GenerateShapeEdges(FullVertList:dict, radius:int, plane:PlaneItem):
     CombinedVertList = {}
@@ -333,6 +334,10 @@ def CycleThroughEdgePointsForColor(EdgeDataList, plane:PlaneItem):
         CurrEdge.__setattr__('AverageColor', AverageColorList) #saves the average color for each of the instances
     
     EdgeDataList = CalculateZAxis(EdgeDataList)
+    meshMidpoint = GetMidPoint(EdgeDataList[0])
+    tempList = list(EdgeDataList[0])
+    tempList.append(meshMidpoint)
+    EdgeDataList[0] = tempList
     return EdgeDataList
 
 def GetAverageOfSurroundingValues(EdgePoint:EdgeData, image):
@@ -512,4 +517,37 @@ def GetSlope(point1:list, point2:list):
 
     
 def GetDistanceBetweenPoints(point1:list, point2:list): #supporting function that just does the distance formula
-    return math.sqrt(((point2[1]-point1[0])**2) + ((point2[1]-point1[1])**2))
+    return math.sqrt(((point2[0]-point1[0])**2) + ((point2[1]-point1[1])**2))
+
+
+def GetDistanceBetweenPoints3D(point1:list, point2:list): #supporting function that just does the distance formula for 3d 
+    return math.sqrt(((point2[0]-point1[0])**2) + ((point2[1]-point1[1])**2) + ((point2[2]-point1[2])**2))
+
+def GetMidPoint(MeshStructure):
+    estimateMidpoints = []
+    furthestDistance = 0
+    tempPoint = [1, 2, 3]
+    for point1 in MeshStructure:
+        for point2 in MeshStructure:
+            if (point1 ==  point2): continue
+            else: 
+                TempDistance = GetDistanceBetweenPoints3D(point1, point2)
+                if (TempDistance > furthestDistance): 
+                    furthestDistance = TempDistance
+                    furthestPoint = point2
+        tempPoint[0] = (point1[0] + furthestPoint[0])/2
+        tempPoint[1] = (point1[1] + furthestPoint[1])/2
+        tempPoint[2] = (point1[2] + furthestPoint[2])/2
+        estimateMidpoints.append(tempPoint)
+        furthestDistance = 0
+
+    xElements = [x[0] for x in estimateMidpoints]
+    yElements = [y[1] for y in estimateMidpoints]
+    zElements = [z[2] for z in estimateMidpoints]
+
+    averageX = sum(xElements) / len(estimateMidpoints)
+    averageY = sum(yElements) / len(estimateMidpoints)
+    averageZ = sum(zElements) / len(estimateMidpoints)
+
+    midpoint = (averageX, averageY, averageZ)
+    return midpoint
