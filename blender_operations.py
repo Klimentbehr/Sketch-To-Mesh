@@ -45,7 +45,6 @@ def GetlistOfPixels(PolyCount, ColorWeAreLookingFor, plane:PlaneItem): #(0, 255,
 #Description: Finds green pixels depending on the side selected above. 
 #This funciton will get every pixel a polycount away and then move to the line where we can select a pixel
 #if is vertical is True we will get a line of pixels going from the bottom up inside of side to side
-
 #remember that when we talk to the image it flips the image
 
 #Parameters
@@ -58,9 +57,9 @@ def GetlistOfPixels(PolyCount, ColorWeAreLookingFor, plane:PlaneItem): #(0, 255,
 #Image is the image we are looping throuh
 #Color is the color we are trying to find in the image
 #isVertical determines if we are using the column(isVertical == True) to go through the list of the row(isVertical == False)
-
 #Return
 #this function returns the list of pixels found
+
 def FindPixels(PolyCount, ImageRow, ImageColumn, base, iteratorValue, ImageArea, image, Color, isVertical = False):
     PixelList = []
     row = 0; column = 0
@@ -105,8 +104,6 @@ def SpaceOutPixels(ImageDictionary, PolyCount):
         FullVertList[Sides] = VertList
     return FullVertList
     
-def GetZAxisByColor(FullVertList, PolyCount, plane:PlaneItem):
-    return GenerateShapeEdges(FullVertList, PolyCount, plane )#polycount is our radius
 
 def NormaliseVertList(FullVertList):
     xArray = []; yArray = []
@@ -166,7 +163,7 @@ def DrawMeshesToScreen(ColorWeAreLookingFor, PolyCount, self, PlaneArray:list[Pl
         if isComplex == True: #only happens when complex is called
             VertList = NormaliseVertList(ImageDictionary)
             MeshStructure = CreateEdges(VertList)
-        else:  MeshStructure = GetZAxisByColor(ImageDictionary, PolyCount * 10, plane) #only called when not complex is called
+        else:  MeshStructure = GenerateShapeEdges(ImageDictionary, PolyCount * 10, plane, ColorWeAreLookingFor) #only called when not complex is called
 
         #draws all the meshes to screen
         DrawMeshToScreen(MeshStructure, self)

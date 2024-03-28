@@ -1,7 +1,6 @@
 import cv2
-import os
 import math
-from .image_processing import PlaneItem
+from .image_processing import PlaneItem, mark_corners, EditPicture, SaveImage
 from threading import Thread, Lock
 from dataclasses import dataclass
 
@@ -25,79 +24,20 @@ class EdgeData:
         self.slope = GetSlope(Point, NextPoint) #gets the slope of each edge
         self.Yintercept = calucalateYIntercept(Point, self.slope )
 
-    def __init__(self, CurrPoint):
-        self.CurrPoint = CurrPoint
 #starts from space out pixels
-def GenerateShapeEdges(FullVertList:dict, radius:int, plane:PlaneItem):
-    CombinedVertList = {}
+def GenerateShapeEdges(FullVertList:dict, radius:int, plane:PlaneItem, ColorToLookFor):
     image = cv2.imread(plane.ImagePlaneFilePath) 
+    Color=(0,0,0)
+    ImageRow = image.shape[0] -1
+    ImageColumn = image.shape[1] -1
 
-    #this should combine all of the sides into one list 
-    for sides in FullVertList:
-        for point in FullVertList[sides]:
-            CombinedVertList[point[0]] = point[1]
+    PointArray:list = GetPointsFromImage(image, plane, ImageRow, ImageColumn)
+    ImagePointArray:list = GetPointsfromPoints(FullVertList, ImageRow, ImageColumn)
+    EdgeList = PointArray + ImagePointArray
 
-    MaxX = max(CombinedVertList)
-    GreatestX = (MaxX, CombinedVertList[MaxX])
-    MinX = min(CombinedVertList)
-    MiniumX = (MinX, CombinedVertList[MinX])
-    MaxY = max(CombinedVertList, key = lambda k: CombinedVertList[k])
-    GreatestY = (MaxY, CombinedVertList[MaxY])
-    MinY = min(CombinedVertList, key = lambda k: CombinedVertList[k])
-    MiniumY = (MinY, CombinedVertList[MinY])
-
-    MinXValue = min(CombinedVertList, key=CombinedVertList.get)
-    TestPointvalues1 = (MinXValue, CombinedVertList[MinXValue])
-
-    MaxXvalue = max(CombinedVertList, key=CombinedVertList.get) 
-    TestPointvalues2 = (MaxXvalue, CombinedVertList[MaxXvalue])
-
-    GreatestXsmallestY = (0, 0)
-    GreatestYsmallestX = (0, 0)
-
-    #sets the greatest value to the smallest value we can get
-    GreatestCurrentValue = (0, (0,0))
-    #sets the smallest value to the larger value we can get
-    SmallestCurrValue = (GetDistanceBetweenPoints((0,0), (image.shape[0], image.shape[1])), (image.shape[0], image.shape[1]))
-
-    CurrSmallBottomvalue = SmallestCurrValue
-    GreatestPointvalues = (0, (0,0))
-    SmallestPointvalues = (10000, (0,0))
-
-
-    for Xvalue in CombinedVertList:
-        YAxis = CombinedVertList[Xvalue] #saves the y value of the list to a more readable varible
-        PointDst = GetDistanceBetweenPoints((0,0), (Xvalue, YAxis))
-        PointValue = Xvalue + YAxis 
-        PointDstBottom = GetDistanceBetweenPoints((image.shape[0], image.shape[1]), (Xvalue, YAxis)) 
-
-        if(PointValue < SmallestPointvalues[0]): SmallestPointvalues = (PointValue, (Xvalue, YAxis) )
-        if(PointValue > GreatestPointvalues[0]): GreatestPointvalues = (PointValue, (Xvalue, YAxis) )
-
-        
-        if (PointDst > GreatestCurrentValue[0]): GreatestCurrentValue = (PointDst, (Xvalue, YAxis))
-        if (PointDst < SmallestCurrValue[0]): SmallestCurrValue = (PointDst, (Xvalue, YAxis))
-        
-        if PointDstBottom < CurrSmallBottomvalue[0]: CurrSmallBottomvalue = (PointDstBottom, (Xvalue, YAxis))
-
-        #we also what the hightest of the Xvalue with the Lowest of Y values and Vice versa
-        if (CalculateGreatestAxisWithsmallestAxis((Xvalue, YAxis), GreatestXsmallestY, "X")) : GreatestXsmallestY = (Xvalue, YAxis)
-        if (CalculateGreatestAxisWithsmallestAxis((Xvalue, YAxis), GreatestXsmallestY, "Y")): GreatestYsmallestX = (Xvalue, YAxis)
-
-    GreatestValue = GreatestCurrentValue[1]
-    SmallestValue = SmallestCurrValue[1]
-    BottomValue = CurrSmallBottomvalue[1]
-    GreatestPointvalue = GreatestPointvalues[1]
-    SmallestPointValues = SmallestPointvalues[1]
-
-    #GreatestY -> GreatestX ->GreatestXGreatestY ->GreatestXsmallestY -> SmallestY -> SmallestXSmallestY ->SmallestXGreatestY -> smallestX
-    #we make the list in this order so they match up
-    EdgeList = [BottomValue, GreatestPointvalue, TestPointvalues2, GreatestX , GreatestXsmallestY, TestPointvalues1, MiniumY, SmallestValue, MiniumX, GreatestValue]
-    
     #we then check for any repeated values
     FinishedList = []
     FinishedList.append(EdgeList[0]) #we add the first element in the array to get it started
-
     for CheckingEdge in EdgeList:
         AddThis = False
         RepeatValue = False
@@ -107,11 +47,115 @@ def GenerateShapeEdges(FullVertList:dict, radius:int, plane:PlaneItem):
 
         if AddThis and RepeatValue == False: 
             FinishedList.append(CheckingEdge)
+            EditPicture(Color, CheckingEdge, image)
+    SaveImage(image, plane.ImagePlaneFilePath, "View0")
             
-    EdgeDataList = CreateEdgeData(FinishedList)
+    EdgeDataList = CreateEdgeData(FinishedList, image, plane, radius, ColorToLookFor)
     EdgeDataListandImage = CalculateLocationsOfAvaliblePixelsAroundPoint(EdgeDataList, radius, plane)
     outputlist = CycleThroughEdgePointsForColor(EdgeDataListandImage, plane)
     return outputlist
+
+def GetPointsFromImage(image, plane:PlaneItem, ImageRow, ImageColumn):
+    EdgePointArray, imageShape = mark_corners(plane.PlaneFilepath)
+    EdgeImageRow = imageShape[0] -1
+    EdgeImageColumn = imageShape[1] -1
+    EnlargedImageRowMultiplier = ImageRow / EdgeImageRow
+    EnlargedImageColumnMultiplier = ImageColumn / EdgeImageColumn
+    CombinedVertList = {}
+
+    for point in EdgePointArray:
+        EnlargedRow = round(point[0] * EnlargedImageRowMultiplier)
+        EnlargedColummn = round(point[1] * EnlargedImageColumnMultiplier)
+        CombinedVertList[EnlargedRow] = EnlargedColummn
+
+    MaxX = max(CombinedVertList)
+    GreatestX = (MaxX, CombinedVertList[MaxX])
+
+    MinX = min(CombinedVertList)
+    MiniumX = (MinX, CombinedVertList[MinX])
+
+    MaxY = max(CombinedVertList, key = lambda k: CombinedVertList[k])
+    GreatestY = (MaxY, CombinedVertList[MaxY])
+
+    MinY = min(CombinedVertList, key = lambda k: CombinedVertList[k])
+    MiniumY = (MinY, CombinedVertList[MinY])
+
+    TopLeft = ((0, ImageColumn))
+    TopRight = ((ImageRow, 0))
+    BottomLeft = ((0, ImageColumn))
+    BottomRight = ((ImageRow, ImageColumn))
+
+    ShapeCorners = [TopLeft, TopRight, BottomLeft, BottomRight]
+    ShapeCorner = [(0,0), (0,0), (0,0) , (0,0)] # there are four spaces for the extra points 
+    ResetValue = (image.shape[1] * image.shape[0], (0,0))
+    SmallestVal = (ResetValue, (0,0))
+    iter = 0
+
+    OldCornerval = ShapeCorners[0] #sets the old corner that we look at to update the iter and sets it to the current 
+    for Corners in ShapeCorners:  #looks at each corner of the shape
+        SmallestVal = ResetValue #resets the smallest value everytime we go to the next corner
+        if not(Corners == OldCornerval) :  iter = iter + 1; OldCornerval = Corners #everytime we get a new corner we update the iter
+
+        for points in CombinedVertList: #loops through the points in the list
+            #checks if the points we are looking for are equal to any of the preivous values
+            if (points, CombinedVertList[points]) == GreatestX or (points, CombinedVertList[points])  == MiniumX or (points, CombinedVertList[points])  == GreatestY or (points, CombinedVertList[points]) == MiniumY: continue
+
+            Dst = abs(GetDistanceBetweenPoints((points, CombinedVertList[points]), Corners))
+            if Dst < SmallestVal[0]: 
+                SmallestVal = (Dst, (points, CombinedVertList[points]))
+                ShapeCorner[iter] = SmallestVal[1]
+
+    iterator = 0 
+    iteratorArray = []
+    for corners in ShapeCorner:
+        if corners == (0,0): iteratorArray.append(iterator)
+        iterator = iterator + 1
+    for iters in iteratorArray: ShapeCorner[iters] = MiniumX
+
+    return [MiniumY, ShapeCorner[0], MiniumX, GreatestY]
+
+def GetPointsfromPoints(FullVertList:list, ImageRow, ImageColumn):
+    CombinedVertList = {}
+    for sides in FullVertList:
+        for point in FullVertList[sides]:
+            CombinedVertList[point[0]] = point[1]
+
+    MaxX = max(CombinedVertList)
+    GreatestX = (MaxX, CombinedVertList[MaxX])
+
+    MinXValue = min(CombinedVertList, key=CombinedVertList.get)
+    TestPointvalues1 = (MinXValue, CombinedVertList[MinXValue])
+
+    GreatestXsmallestY = (0, 0)
+    #sets the greatest value to the smallest value we can get
+    GreatestCurrentValue = (0, (0,0))
+    #sets the smallest value to the larger value we can get
+    SmallestCurrValue = (GetDistanceBetweenPoints((0,0), (ImageRow, ImageColumn)), (ImageRow, ImageColumn))
+
+    CurrSmallBottomvalue = SmallestCurrValue
+    GreatestPointvalues = (0, (0,0))
+    SmallestPointvalues = (10000, (0,0))
+
+    for Xvalue in CombinedVertList:
+        YAxis = CombinedVertList[Xvalue] #saves the y value of the list to a more readable varible
+        PointDst = GetDistanceBetweenPoints((0,0), (Xvalue, YAxis))
+        PointValue = Xvalue + YAxis 
+        PointDstBottom = GetDistanceBetweenPoints((ImageRow, ImageColumn), (Xvalue, YAxis)) 
+
+        if(PointValue < SmallestPointvalues[0]): SmallestPointvalues = (PointValue, (Xvalue, YAxis) )
+        if(PointValue > GreatestPointvalues[0]): GreatestPointvalues = (PointValue, (Xvalue, YAxis) )
+
+        if (PointDst > GreatestCurrentValue[0]): GreatestCurrentValue = (PointDst, (Xvalue, YAxis))
+        if (PointDst < SmallestCurrValue[0]): SmallestCurrValue = (PointDst, (Xvalue, YAxis))
+        
+        if PointDstBottom < CurrSmallBottomvalue[0]: CurrSmallBottomvalue = (PointDstBottom, (Xvalue, YAxis))
+
+        #we also what the hightest of the Xvalue with the Lowest of Y values and Vice versa
+        if (CalculateGreatestAxisWithsmallestAxis((Xvalue, YAxis), GreatestXsmallestY, "X")) : GreatestXsmallestY = (Xvalue, YAxis)
+
+    #GreatestY -> GreatestX ->GreatestXGreatestY ->GreatestXsmallestY -> SmallestY -> SmallestXSmallestY ->SmallestXGreatestY -> smallestX
+    #we make the list in this order so they match up
+    return  [GreatestX , GreatestXsmallestY, TestPointvalues1]
 
 def CalculateGreatestAxisWithsmallestAxis(Point1:list, Point2:list, GreaterVal:str):
     returnBool = False
@@ -126,23 +170,45 @@ def CalculateGreatestAxisWithsmallestAxis(Point1:list, Point2:list, GreaterVal:s
             if dist1 > dist2: returnBool = True
     return returnBool
 
-def CreateEdgeData(FinishedList:list):
+def CreateEdgeData(FinishedList:list, image, plane:PlaneItem, radius, ColorToLookFor):
     iter = 1
     EdgeDataList = {}
-
+    #ThreadList = []
     for edgepoint in FinishedList: #collects line information for the edgedata list
-        #threadToRun = threading.Thread(target=ThreadingFunctionForCreatingEdgedata, args=(FinishedList, plane, EdgeDataList, edgepoint, iter))
-        #ThreadingFunctionForCreatingEdgedata(FinishedList:list, plane:PlaneItem, EdgeDataList, edgepoint)
+        #threadToRun = Thread(target=ThreadingFunctionForCreatingEdgedata, args=(FinishedList, EdgeDataList, edgepoint, iter, image, plane))
+        #ThreadList.append(threadToRun)
+        #threadToRun.start()
+        #CheckForInsideLines(edgepoint, radius , image, ColorToLookFor)
+
         if iter >= FinishedList.__len__(): NextPoint = FinishedList[0] #if we get to the last place in the array that means we've come to the point right before the beginning
         else : NextPoint = FinishedList[iter] #we first get the next point in the list
+        #mutex.acquire();  mutex.release()
         iter = iter + 1
-        
+        Color =(0,0,0)
         EdgeDataList[edgepoint] = EdgeData(edgepoint, NextPoint) # creates a new edgedata
         CurrEdgePoint:EdgeData = EdgeDataList[edgepoint] # allows us to access the data class
         Linedata = SolidifyEdgePointlines(calculateLine(edgepoint, NextPoint, CurrEdgePoint.slope, CurrEdgePoint.Yintercept)) #solidifies the line we just made
+        #mutex.acquire()
+        for points in Linedata: EditPicture(Color, points, image)
+        SaveImage(image, plane.ImagePlaneFilePath, "View0")
+        #mutex.release()
         CurrEdgePoint.__setattr__('LinePoints', Linedata)
-    
+    #for threads in ThreadList:threads.join()    
     return EdgeDataList
+
+def ThreadingFunctionForCreatingEdgedata(FinishedList, EdgeDataList, edgepoint, iter, image, plane:PlaneItem):
+    if iter >= FinishedList.__len__(): NextPoint = FinishedList[0] #if we get to the last place in the array that means we've come to the point right before the beginning
+    else : NextPoint = FinishedList[iter] #we first get the next point in the list
+    mutex.acquire(); iter = iter + 1; mutex.release()
+    Color =(0,0,0)
+    EdgeDataList[edgepoint] = EdgeData(edgepoint, NextPoint) # creates a new edgedata
+    CurrEdgePoint:EdgeData = EdgeDataList[edgepoint] # allows us to access the data class
+    Linedata = SolidifyEdgePointlines(calculateLine(edgepoint, NextPoint, CurrEdgePoint.slope, CurrEdgePoint.Yintercept)) #solidifies the line we just made
+    mutex.acquire()
+    for points in Linedata: EditPicture(Color, points, image)
+    SaveImage(image, plane.ImagePlaneFilePath, "View0")
+    mutex.release()
+    CurrEdgePoint.__setattr__('LinePoints', Linedata)
 
 def calculateLine(Point, NextPoint, slope, Yintercept):
     LineData = []
@@ -192,9 +258,9 @@ def CalculateLocationsOfAvaliblePixelsAroundPoint(EdgeDataList:dict, radius:int,
     threadlist = []
     for points in EdgeDataList:
        threadToRun = Thread(target=ThreadingFunctionForMakingDotsAndCheckingCollisions, args=(points, EdgeDataList, image, radius, [image.shape[0], image.shape[1]], LinePointDictionary))
-       threadToRun.start()
        threadlist.append(threadToRun)
-
+       threadToRun.start()
+       
     for threads in threadlist: threads.join() #joins the threads after they have started running
     return EdgeDataList
 
@@ -213,10 +279,12 @@ def ThreadingFunctionForMakingDotsAndCheckingCollisions(points, EdgeDataList:lis
     for pointToCheck in EdgeDataList[points].AllSurrondingPoints:#loops thorugh all the points in the points surrounding the edgepoint
         EditPicture((123, 123, 124), pointToCheck, image) # displays the active points on screen
          #we check if the points are inside the shape
-        if CalculateCollision(pointToCheck, imagedata, LinePointDictionary) == True: PointToBeCheckedForColorList.append(pointToCheck)  #the points we want check for color
+        if CalculateCollision(pointToCheck, imagedata, LinePointDictionary) == True:
+            PointToBeCheckedForColorList.append(pointToCheck)  #the points we want check for color
         elif CalculateCollsionWithY(pointToCheck, imagedata, LinePointDictionary) == True:PointToBeCheckedForColorList.append(pointToCheck)  #the points we want check for color
             
     EdgeDataList[points].__setattr__('PointToBeCheckedForColor', PointToBeCheckedForColorList)#sets the points to be checked to the unquie instance
+
 def makeDot(CenterPoint:list, radius, imagedata):
     CurrSurroundingVals = []
 
@@ -405,26 +473,12 @@ def GenerateEdges(VertList:list, request:str):
     MeshStructure[2] = []
     return MeshStructure
 
-def EditPicture(Color:list, Point:list, image):
-    image[Point][0] = Color[0]
-    image[Point][1] = Color[1]
-    image[Point][2] = Color[2]
-
-def SaveImage(image, plane:PlaneItem):
-    os.curdir
-    Extension =  plane.PlaneFilepath[plane.PlaneFilepath.rfind("."): ] 
-    os.chdir("ImageFolder") #changes the directory to the folder where we are going to save the file
-    cv2.imwrite("View0" + Extension, image ) #saves the image
-    os.chdir("..\\") #goes back one directory   
-
-
-def CheckForInsideLines(EdgeList:dict, edgePoint:list, radius:int, image, Color:list):
-    ConfirmedPoints = CalculateCircumference(radius, EdgeList[edgePoint], image, Color)
+def CheckForInsideLines(CurrPoint:list, radius:int, image, Color:list, EdgeList:dict):
+    ConfirmedPoints = CalculateCircumference(radius, CurrPoint, image, Color)
     for ConfirmedPoints in ConfirmedPoints:
-        lastPointOnLine = CheckLineDst(ConfirmedPoints, EdgeList[edgePoint])
+        lastPointOnLine = CheckLineDst(ConfirmedPoints, CurrPoint)
         if EdgeList.get(lastPointOnLine): break
         else: CheckForInsideLines(EdgeList, radius, image, Color)
-
 
 def CalculateCircumference(radius:int, center:list, image, Color):
     right = ((center[0] + radius, center[1]), [] , 0 , 0, [])
@@ -451,7 +505,6 @@ def CalculateCircumference(radius:int, center:list, image, Color):
         for morePoints in PointsToCheckForDst:
             if points == morePoints: continue
             if abs(GetDistanceBetweenPoints(points, morePoints)) <= radius: ConfirmedPoints.append(points)
-    
     return ConfirmedPoints
 
 def CheckLineDst(ConfirmedPoint, edgePoint, image, Color):
@@ -509,4 +562,4 @@ def GetSlope(point1:list, point2:list):
 
     
 def GetDistanceBetweenPoints(point1:list, point2:list): #supporting function that just does the distance formula
-    return math.sqrt(((point2[1]-point1[0])**2) + ((point2[1]-point1[1])**2))
+    return math.sqrt(((point2[0]-point1[0])**2) + ((point2[1]-point1[1])**2))
