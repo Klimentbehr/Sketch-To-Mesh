@@ -132,11 +132,18 @@ def find_and_color_vertices(image_path):
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV) # hsv color spread makes it easier to identify the colors we want
 
     color_ranges = {
-        1: ((0, 100, 100), (10, 255, 255)),   # red
-        2: ((50, 100, 100), (70, 255, 255)),  # green
-        3: ((110, 100, 100), (130, 255, 255)), # blue
-        4: ((25, 100, 100), (35, 255, 255)), # yellow
-    
+        1: ((0, 50, 50), (10, 255, 255)),    # Red
+        2: ((50, 50, 50), (70, 255, 255)),   # Green
+        3: ((110, 50, 50), (130, 255, 255)), # Blue
+        4: ((25, 50, 50), (35, 255, 255)),   # Yellow
+        5: ((85, 50, 50), (95, 255, 255)),   # Cyan (Light blue)
+        6: ((140, 50, 50), (160, 255, 255)), # Magenta (Pink)
+        7: ((10, 50, 50), (20, 255, 255)),   # Orange
+        8: ((35, 50, 50), (45, 255, 255)),   # Light Green
+        9: ((200, 50, 50), (220, 255, 255)), # Dark Blue
+        #10: ((260, 50, 50), (280, 255, 255)),# Purple -- might be wrong? orange procs this for some reason 
+        10: ((120, 50, 50), (140, 255, 255)),
+        11: ((150,50,200), (170,255,255))
     }
 
     corners_with_id = {}
@@ -163,6 +170,20 @@ def find_and_color_vertices(image_path):
 
     return image, corners_with_id
 
+def structure_matches(image_path1, image_path2):
+
+    # no use for one of the returns, really. it only exists for visualization
+    image1, corners_with_id1 = find_and_color_vertices(image_path1)
+    image2, corners_with_id2 = find_and_color_vertices(image_path2)
+
+    # Assuming the colors are unique and match perfectly, you can match based on color ID
+    matched_vertices = {}
+    for position1, color_id1 in corners_with_id1.items():
+        for position2, color_id2 in corners_with_id2.items():
+            if color_id1 == color_id2:
+                matched_vertices[color_id1] = (position1, position2)
+    return matched_vertices
+
 def visualize_connections(image1, corners1, image2, corners2):
     
     # just connecting both images for vizualization
@@ -175,7 +196,7 @@ def visualize_connections(image1, corners1, image2, corners2):
     font = cv2.FONT_HERSHEY_SIMPLEX
     
     # zip returns the first iterator in both dictionaries. its kinda weird but i found it good to be used here
-    # basically i am iterating both at the same time
+    # basically i am iterating both at the same time using something called tuples
     for (c1, id1), (c2, id2) in zip(corners1.items(), corners2.items()):
 
         # just circles to identify the corners detected easier
@@ -183,8 +204,9 @@ def visualize_connections(image1, corners1, image2, corners2):
         cv2.circle(combined_image, (c2[0] + image1.shape[1], c2[1]), 5, (0, 255, 0), -1)
 
         # if points have the same id in the dictionary
-        if id1 == id2:
-            cv2.line(combined_image, c1, (c2[0] + image1.shape[1], c2[1]), (255, 0, 0), 2) # connecting both points with blue line
+        # NOTE: this is becoming annoying, so i just commented.
+        #if id1 == id2:
+            #cv2.line(combined_image, c1, (c2[0] + image1.shape[1], c2[1]), (255, 0, 0), 2) # connecting both points with blue line
         
         # writing the id for visualization (ONLY FOR BUILD REVIEW I GUESS?)
         # TODO: figure out if this is needed or not
@@ -194,27 +216,29 @@ def visualize_connections(image1, corners1, image2, corners2):
     cv2.imshow('Matched Corners with IDs', combined_image)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
+
+# for known rotation there is stuff that needs to be figured out.
+# if we just move the cube on the z-axis 90 degrees, the cube will appear to not have changed, but the position of the previous marked points have changed.
+def estimate_relative_depth(matched_vertices, known_rotation):
     
-# def camera_estimation(image1, image2, corner1, corner2): 
+    relative_depths = {}
     
-#     # i need to create a data struct that represents the both corner1 and corner2 matched values
-#     temp = 1
-
-#     # camera calibration parameters
-#     K = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]])  # Intrinsic matrix
-#     dist_coeffs = np.array([k1, k2, p1, p2, k3])          # Distortion coefficients
-
-#     # essential matrix estimation (from matching points and camera parameters)
-#     E, _ = cv2.findEssentialMat(matching_points_image1, matching_points_image2, K, method=cv2.RANSAC, prob=0.999, threshold=0.5)
-
-#     # recover relative pose (rotation and translation) from the essential matrix
-#     _, R, t, _ = cv2.recoverPose(E, matching_points_image1, matching_points_image2, K)
-
-#     # triangulate points to estimate 3D structure
-#     P1 = np.hstack((np.eye(3), np.zeros((3, 1))))  # Projection matrix for image 1
-#     P2 = np.hstack((R, t))                         # Projection matrix for image 2
-#     points_4d = cv2.triangulatePoints(P1, P2, matching_points_image1, matching_points_image2)
-#     points_3d = points_4d[:3] / points_4d[3]
+    # we calculate difference in position, then calculate the magnitude.
+    for vertex_id, (pos_before, pos_after) in matched_vertices.items():
+        
+        delta_x = pos_after[0] - pos_before[0]
+        delta_y = pos_after[1] - pos_before[1]
+        
+        # sse the magnitude of movement as a proxy for depth
+        # the relationship between movement and depth will depend on the known rotation
+        movement_magnitude = (delta_x**2 + delta_y**2)**0.5
+        relative_depths[vertex_id] = movement_magnitude
+    
+    # Normalize the depths to the largest movement, so it scales from 0 to 1 (or any chosen scale)
+    max_movement = max(relative_depths.values())
+    normalized_depths = {vertex_id: depth / max_movement for vertex_id, depth in relative_depths.items()}
+    
+    return normalized_depths
     
 def match_features(descriptors1, descriptors2, method='ORB'):
     # using ORB and AKAZE for testing

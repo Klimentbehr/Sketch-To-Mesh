@@ -70,6 +70,8 @@ class VIEW3D_PT_Sketch_To_Mesh_Testing(bpy.types.Panel):
         row.operator("wm.place_mesh", text="Place Mesh")
         row = layout.row()
         row.operator("wm.toast_notification", text="Toast Test")
+        row = layout.row()
+        row.operator("wm.match_return_operator", text="Test Matched Structure") 
 
 
 

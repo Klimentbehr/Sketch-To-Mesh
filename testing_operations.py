@@ -1,6 +1,6 @@
 import bpy
 from .db_operations import test_connection, save_file_to_db, get_files_by_user_id, delete_files_by_object_id # the . is on purpose. do not remove
-from .image_processing import test_feature_detection, find_and_color_vertices, visualize_connections # the . is on purpose. do not remove
+from .image_processing import test_feature_detection, find_and_color_vertices, visualize_connections, structure_matches, estimate_relative_depth # the . is on purpose. do not remove
 from .blender_operations import DrawMeshToScreen
 from .blender_operations import saveObj
 
@@ -79,7 +79,32 @@ class StMTestImagePrep(bpy.types.Operator):
         print("Coordinates of corners:")
         for (c1, id1), (c2, id2) in zip(corner1.items(), corner2.items()):
             if id1 == id2:
-                print(f"The point {c1} in image 1 matched with {c2} in image 2 with color ID {id1}")
+                print(f"The point {c1} in image 1 matched with {c2} in image 2 with color ID {id1}")            
+        return {'FINISHED'}
+
+class StMTestMatchReturn(bpy.types.Operator):
+    bl_idname = "wm.match_return_operator"
+    bl_label = "Test Match Return"
+    bl_description = "Testing if Data is organized correctly"
+
+
+    def execute(self, context):
+
+        path_one = r"C:\Users\RAFAEL MUITO ZIKA\Desktop\Test Images\colored-1.png"
+        path_two = r"C:\Users\RAFAEL MUITO ZIKA\Desktop\Test Images\colored-2.png"
+        
+        result = structure_matches(path_one, path_two)
+        result_two = estimate_relative_depth(result, 90) # 90 degrees
+        
+        for color_id, (position1, position2) in result.items(): 
+            print(f"Color ID {color_id}: Image 1 Position {position1}, Image 2 Position {position2}")
+            
+        print("Estimated Relative Depths:")
+        
+        for vertex_id, depth in result_two.items():
+            print(f"Vertex {vertex_id}: Depth = {depth:.2f}")
+            
+        return {'FINISHED'}
 
 
 # class that executes test_connection from db_operations
