@@ -334,8 +334,11 @@ def CycleThroughEdgePointsForColor(EdgeDataList, plane:PlaneItem):
         CurrEdge.__setattr__('AverageColor', AverageColorList) #saves the average color for each of the instances
     
     EdgeDataList = CalculateZAxis(EdgeDataList)
-    meshMidpoint = GetMidPoint(EdgeDataList[0])
+    meshMidpoint = GetMidPoint(EdgeDataList[0]) #retrieves the midpoint from current edge data
+    transposedMesh = TransposeMesh(meshMidpoint, EdgeDataList[0]) #transposes the matrix so that that points are generated that mirror the current 3d mesh
     tempList = list(EdgeDataList[0])
+    for points in transposedMesh: #this for loop adds the transposed points to the mesh
+        tempList.append(points)
     tempList.append(meshMidpoint)
     EdgeDataList[0] = tempList
     return EdgeDataList
@@ -552,3 +555,13 @@ def GetMidPoint(MeshStructure):
     #return the midpoint constructed
     midpoint = (averageX, averageY, averageZ)
     return midpoint
+
+def TransposeMesh(Midpoint, Mesh):
+    transposedPoints = []
+    for point in Mesh:
+            tempPoint = list(point)
+            tempPoint[0] = (Midpoint[0] + (Midpoint[0] - point[0]))
+            tempPoint[1] = (Midpoint[1] + (Midpoint[1] - point[1]))
+            tempPoint[2] = (Midpoint[2] + (Midpoint[2] - point[2]))
+            transposedPoints.append(tempPoint)
+    return transposedPoints
