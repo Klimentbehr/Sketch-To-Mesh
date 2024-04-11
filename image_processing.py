@@ -233,6 +233,31 @@ def estimate_relative_depth(matched_vertices, known_rotation):
         # the relationship between movement and depth will depend on the known rotation
         movement_magnitude = (delta_x**2 + delta_y**2)**0.5
         relative_depths[vertex_id] = movement_magnitude
+
+    def polygonEstimation(path):
+    
+        image = cv2.imread(path)
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        _, thresh = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY_INV)
+
+        # find contours
+        contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        blank_image = np.zeros(image.shape, dtype=np.uint8) # blank image for testing
+
+        # approximate contours to polygons and draw them
+        #
+        for cnt in contours:
+            
+            #epsilon is the approx accuracy. 
+            epsilon = 0.01 * cv2.arcLength(cnt, True) # arc length calculates perimeter
+            approx = cv2.approxPolyDP(cnt, epsilon, True)
+            cv2.drawContours(blank_image, [approx], 0, (0, 255, 0), 3) 
+            cv2.drawContours(image, [approx], 0, (0, 255, 0), 3)
+
+        cv2.imshow('Polygon Approximation', blank_image)
+        #cv2.imshow('Polygon Approximation', image)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
     
     # Normalize the depths to the largest movement, so it scales from 0 to 1 (or any chosen scale)
     max_movement = max(relative_depths.values())

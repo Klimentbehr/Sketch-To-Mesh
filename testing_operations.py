@@ -66,8 +66,8 @@ class StMTestImagePrep(bpy.types.Operator):
 
     def execute(self, context):
         #test_feature_detection()
-        path_one = r"C:\Users\RAFAEL MUITO ZIKA\Desktop\Test Images\colored-1.png"
-        path_two = r"C:\Users\RAFAEL MUITO ZIKA\Desktop\Test Images\colored-2.png"
+        path_one = r"/Users/rafaelfernandesdasilva/Desktop/Capstone-Month1/colored-1.png"
+        path_two = r"/Users/rafaelfernandesdasilva/Desktop/Capstone-Month1/colored-2.png"
         
         image1, corner1 = find_and_color_vertices(path_one)
         image2, corner2 = find_and_color_vertices(path_two)
@@ -90,8 +90,8 @@ class StMTestMatchReturn(bpy.types.Operator):
 
     def execute(self, context):
 
-        path_one = r"C:\Users\RAFAEL MUITO ZIKA\Desktop\Test Images\colored-1.png"
-        path_two = r"C:\Users\RAFAEL MUITO ZIKA\Desktop\Test Images\colored-2.png"
+        path_one = r"/Users/rafaelfernandesdasilva/Desktop/Capstone-Month1/colored-1.png"
+        path_two = r"/Users/rafaelfernandesdasilva/Desktop/Capstone-Month1/colored-2.png"
         
         result = structure_matches(path_one, path_two)
         result_two = estimate_relative_depth(result, 90) # 90 degrees
