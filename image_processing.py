@@ -86,7 +86,7 @@ def outline_image(image_path, Extension, ImgName, Filedirectory):
     # Check if any contours were found
     if contours:
         # Draw contours on the original image
-        cv2.drawContours(resized_image, contours, -1, (0, 255, 0), 2)
+        cv2.drawContours(resized_image, contours, -1, (0, 255, 0), 10)
         # Calculate the combined center of mass for all contours
         totalX, totalY, totalArea = 0, 0, 0
 

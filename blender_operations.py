@@ -5,7 +5,7 @@ import io
 import tempfile
 from .image_processing import PlaneItem
 from .file_conversion import blend_opener, fbx_opener
-from .DepthByColor import GenerateEdges, NormaliseData, GenerateShapeEdges, GetDistanceBetweenPoints
+from .DepthByColor import GenerateEdges, NormaliseData, GenerateShapeEdges, GetDistanceBetweenPoints, ColorCheck
 
 def saveObj():
     filepath = os.path.abspath("ExportFolder\\" + bpy.context.scene.FileName_Input + ".fbx"  )
@@ -26,6 +26,7 @@ def GetlistOfPixels(PolyCount, ColorWeAreLookingFor, plane:PlaneItem): #(0, 255,
     ImageColumn = Image.shape[1] -1
     HalfImageRow = round(ImageRow * 0.5)
     AreaOfImage = ImageRow * ImageColumn
+    ImageData = [ImageRow, ImageColumn]
 
     for iterator in range(5):
         match iterator: # this will loop through the image and gather the green pxiels outlined on each side
@@ -39,7 +40,7 @@ def GetlistOfPixels(PolyCount, ColorWeAreLookingFor, plane:PlaneItem): #(0, 255,
             case 3: ImageDictionary[iterator] = FindPixels(PolyCount, ImageRow, ImageColumn, base= HalfImageRow, iteratorValue= -1, ImageArea = AreaOfImage, image = Image, Color=ColorWeAreLookingFor)
             #Vertical
             case 4: ImageDictionary[iterator] = FindPixels(PolyCount, ImageRow, ImageColumn, base= HalfImageRow, iteratorValue= 1, ImageArea = AreaOfImage, image = Image, Color=ColorWeAreLookingFor, isVertical=True)
-    return ImageDictionary
+    return ImageDictionary , ImageData , Image
 
 #FindPixels 
 #Description: Finds green pixels depending on the side selected above. 
@@ -70,7 +71,7 @@ def FindPixels(PolyCount, ImageRow, ImageColumn, base, iteratorValue, ImageArea,
         if abs(column) >= ImageColumn:  # when we get to the end of the image
             if isVertical: column = base; row = row + 1
             else: break
-        if (int(image[row, column][0]), int(image[row, column][1]), int(image[row, column][2])) == Color:
+        if ColorCheck(image, (row, column), Color):
             PixelList.append((row, column)) #If the pixel list is empty then it is the first pixel to be added
             if isVertical:
                 if (row + PolyCount) > ImageRow : break 
@@ -83,7 +84,112 @@ def FindPixels(PolyCount, ImageRow, ImageColumn, base, iteratorValue, ImageArea,
             else: row = row + iteratorValue
     return PixelList
 
-#Not really useful because we do this in the first function now
+#GetLineOfPixels
+#Description
+#Goes through each line of Pixels present in the image and collects the colors of each pixels
+#These colors will be sotred in a dictionary with the coordinate of the Pixel being the Key and the AverageColor of the Pixel being the value
+
+#Parameters
+#SideList:the list of pixels from one side of the ImageDictionary. This  should be the right side of the image
+#imagedata: provides us with the width and length of the image
+#image: provides the image so we can access points on the image 
+#ColorToLookOutFor: the color openCv uses as a indicator
+
+#Returns
+#PixelLineColorDictionary: This contains the pixels accessed. The key is the Coordinate of a Pixel and the Value is the AverageColor of the Pixels
+def GetLineOfPixels(RightSideList, imagedata, image, ColorToLookOutFor):
+    LookForPixels = True
+    PixelLineColorDictionary = {}
+    for Pixel in RightSideList:
+        CurrPixel = (Pixel[0]+1, Pixel[1])#this will set us to the next point we are looking for
+        while not(CurrPixel[0] == imagedata[0]):
+            ImageColor = ColorLister(image, CurrPixel)
+            if ImageColor == ColorToLookOutFor: 
+                if LookForPixels:
+                    PixelLineColorDictionary[CurrPixel] = [0] #we want to record the pixel but we want to set it at 0 because we are at the end of the line
+                    LookForPixels = False # we Stop recording the pixels and wait till we either get to the end of the picture or we hit another
+                else: LookForPixels = True
+            elif LookForPixels: PixelLineColorDictionary[CurrPixel] = round((ImageColor[0]+ ImageColor[1] + ImageColor[2]) /3)
+            CurrPixel = (CurrPixel[0]+1, CurrPixel[1])
+    return PixelLineColorDictionary
+
+#DefineDictioniesForColorsLines
+#Description
+#Goes through the Dictionary of points and turns then into a dictionary of lines.
+#This Dictionary is defined with it key being the id of the line(interger that is not repeated) and the value being the line that is stored
+
+#Parameters:
+#PixelLineColorDictionary: This dictionary contains the coordinates and the ColorAverages that will be converted into Z values
+
+#Returns:
+#MeshStructureLibrary: This is a dictionary of MeshStructures which are dictionaries which contain the points Blender needs to generate an image
+def DefineDictioniesForColorsLines(PixelLineColorDictionary):
+    PixelLinePoints = {}
+    MeshStructureLibrary = []
+    PixelLinesLibrary = {}
+    PixelList = []
+    PixelLineList = []
+    pixelAsListButActuallyAList = []
+    first = True
+
+    iter = 0
+    for pixelPoints in PixelLineColorDictionary:
+        if first: CurrPixelLines = pixelPoints; first = False #sets the CurrPixelLines
+        if CurrPixelLines[1] == pixelPoints[1]:  
+            PixelList.append([pixelPoints[0], pixelPoints[1], PixelLineColorDictionary[pixelPoints]]) #if we are on the same line
+        else:
+            PixelList[-1] = (PixelList[-1][0], PixelList[-1][1], 0) #sets the point at the 
+            PixelLinePoints[iter] = PixelList
+            PixelList = [] #Reset the PixelList
+            iter= iter + 1
+            PixelList.append([pixelPoints[0], pixelPoints[1], 0])
+            CurrPixelLines = pixelPoints
+    
+    XValues = []; YValues = [];  ZValues = []
+    for PixelLines in PixelLinePoints:
+        first =True
+        for pixelPoints in PixelLinePoints[PixelLines]:
+            if first:YValues.append(pixelPoints[1]); first = False
+            XValues.append(pixelPoints[0])  
+            ZValues.append(pixelPoints[2]) 
+        NormalisedXValues = NormaliseData(XValues)#normalises the X data
+        NormalisedZValues = NormaliseData(ZValues)#normalises the Z data
+
+        iterator = 0
+        for points in NormalisedXValues:
+            PixelLineList.append((points, iterator ,NormalisedZValues[iterator]))
+            iterator = iterator + 1
+        PixelLinesLibrary[PixelLines] = PixelLineList
+        #Resets the list for the next values
+        XValues = []
+        ZValues = []
+
+    NormalisedYValues = NormaliseData(YValues) #normalises the Y data
+    
+    iteratorMarkTwo = 0
+    for PixelLines in PixelLinesLibrary:
+        for pixels in PixelLinesLibrary[PixelLines]: 
+            pixelAsList = list(pixels) 
+            pixelAsList = pixelAsList[0], NormalisedYValues[iteratorMarkTwo], pixelAsList[2]
+            pixelAsListButActuallyAList.append(pixelAsList)
+        iteratorMarkTwo = iteratorMarkTwo + 1
+    MeshStructureLibrary.append(GenerateEdges(pixelAsListButActuallyAList, "BlenderPoints")) 
+
+    return MeshStructureLibrary
+
+#ColorLister
+#Description: Takes a image and a Pixel's coordinate and finds the corrosponding pixel color for that coordinate
+
+#Parameters
+#image: We need the reference image that has the coordinate in it
+#PixelCoordinate: This is coordinate being referenced when we get the color from the image.
+
+#Returns
+#StandardizedColor: This is the color from the image, but in a list with all of the rgb values set to ints
+def ColorLister(image, PixelCoordinate):
+    StandardizedColor = [int(image[PixelCoordinate][0]), int(image[PixelCoordinate][1]), int(image[PixelCoordinate][2])]
+    return StandardizedColor
+
 def SpaceOutPixels(ImageDictionary, PolyCount):
     FullVertList = {} #new dictionary to 
 
@@ -107,7 +213,6 @@ def SpaceOutPixels(ImageDictionary, PolyCount):
 
 def NormaliseVertList(FullVertList):
     xArray = []; yArray = []
-
     #since we know that there are only are only 4 sides in the FullVertList we can add all of the points into a new list
     for VertList in FullVertList:
         for verts in FullVertList[VertList]: # we separate the X and Y values so we can normalise the data sets
@@ -126,13 +231,10 @@ def NormaliseVertList(FullVertList):
 
 def CreateEdges(VertList):
     if VertList == False:  return False #ends the function before any extra work is done
-
     MeshStructure = GenerateEdges(VertList, "BlenderPoints")
-
-    MeshStructure[2] = [] #this will hold the faces
     return MeshStructure
 
-def DrawMeshToScreen(MeshStructure, self):
+def DrawMeshToScreen(MeshStructure, self, CollectionName = "Sketch_to_Mesh_Collection", MeshName = "Sketch_to_Mesh_MeshObject"):
     if MeshStructure == False:
         self.report({'ERROR'}, "Invalid Image") 
     else:
@@ -149,7 +251,7 @@ def DrawMeshToScreen(MeshStructure, self):
         # make object from mesh
         new_object = bpy.data.objects.new('Sketch_to_Mesh_mesh', new_mesh)
         # make collection
-        new_collection = bpy.data.collections.new('Sketch_to_Mesh_Collection')
+        new_collection = bpy.data.collections.new(CollectionName)
         bpy.context.scene.collection.children.link(new_collection)
         # add object to scene collection
         new_collection.objects.link(new_object)
@@ -157,16 +259,22 @@ def DrawMeshToScreen(MeshStructure, self):
 #Draws all the non Complex meshes to screen 
 def DrawMeshesToScreen(ColorWeAreLookingFor, PolyCount, self, PlaneArray:list[PlaneItem], isComplex):
     for plane in PlaneArray:
-        ImageDictionary = GetlistOfPixels(PolyCount, ColorWeAreLookingFor, plane)
+        ImageDictionary, Imagedata, Image = GetlistOfPixels(PolyCount, ColorWeAreLookingFor, plane)
         #FullVertList = SpaceOutPixels(ImageDictionary, PolyCount)
 
         if isComplex == True: #only happens when complex is called
             VertList = NormaliseVertList(ImageDictionary)
             MeshStructure = CreateEdges(VertList)
-        else:  MeshStructure = GenerateShapeEdges(ImageDictionary, PolyCount * 10, plane, ColorWeAreLookingFor) #only called when not complex is called
+            DrawMeshToScreen(MeshStructure, self, "Sketch_To_Mesh_Collection", "ComplexMesh") # this is the outline of the mesh
+            PixelLineDictionary= GetLineOfPixels(ImageDictionary[0], Imagedata, Image, ColorWeAreLookingFor)
+            MeshStructureLibrary = DefineDictioniesForColorsLines(PixelLineDictionary)
+            DrawMeshToScreen(MeshStructureLibrary[0], self, "Sketch_To_Mesh_Collection", "ComplexMesh")
 
+        else: 
+            MeshStructure = GenerateShapeEdges(ImageDictionary, PolyCount, plane, ColorWeAreLookingFor) #only called when not complex is called
+            DrawMeshToScreen(MeshStructure, self)
         #draws all the meshes to screen
-        DrawMeshToScreen(MeshStructure, self)
+           
 
 # TODO: return something that is not 0. case handling and error handling, as well as completed and noncompleted states.
 def encode_file(file_path):
