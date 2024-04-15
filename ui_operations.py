@@ -7,7 +7,7 @@ from os import path
 import numpy as np
 
 from .image_processing import Feature_detection, PlaneItem
-from .blender_operations import DrawMeshesToScreen
+from .blender_operations import DrawMesh
 
 GlobalPlaneDataArray : list[PlaneItem] = [] # this will eventually replace the two array under this
 
@@ -127,5 +127,5 @@ class PlaceMesh(bpy.types.Operator):
     bl_label ="Place Mesh"
 
     def execute(self, context):
-        DrawMeshesToScreen((0, 255, 0), bpy.context.scene.poly_count_range, self, GlobalPlaneDataArray, bpy.context.scene.IsComplex)
+        DrawMesh((0, 255, 0), bpy.context.scene.poly_count_range, self, GlobalPlaneDataArray, bpy.context.scene.IsComplex)
         return {'FINISHED'}

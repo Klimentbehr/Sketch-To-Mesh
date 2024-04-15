@@ -243,6 +243,34 @@ def SpaceOutPixels(ImageDictionary, PolyCount):
         FullVertList[Sides] = VertList
     return FullVertList
 
+
+#NormaliseVertList
+#Description
+#This normalises the ImageDictionary. This is meant to be here. There is another funciton that does the same function with a list
+#We might have to merge the two functions together
+
+#Parameters
+#FullVertList:  This is the updated ImageDictionary contained the spaced out points
+
+#Returns
+#NewNarrowList: This is the new normalise list used for mesh creation
+def NormaliseVertList(FullVertList):
+    xArray = []; yArray = []
+
+    #since we know that there are only are only 4 sides in the FullVertList we can add all of the points into a new list
+    for VertList in FullVertList:
+        for verts in FullVertList[VertList]: # we separate the X and Y values so we can normalise the data sets
+            xArray.append(verts[0]) ; yArray.append(verts[1])
+    # normalising the arrays 
+    xArray = NormaliseData(xArray); yArray = NormaliseData(yArray)
+    if xArray == False or yArray == False: return False# if any of the arrays are empty
+    # we then take the separted normal data input them back into coordinates and add them to the list
+    NarrowedNormalisedVertList = []
+    for count in range(xArray.__len__()): NarrowedNormalisedVertList.append(((xArray[count]), (yArray[count]), (1.0))) # we add the one into the list so the list will have the Z coordinate.
+    #Blender doesn't like dictionaries so we have to create a tuple in order to store the X,Y, and Z coordinates
+    NewNarrowList = tuple(NarrowedNormalisedVertList)
+    return NewNarrowList    
+
 #DrawMeshToScreen
 #Description
 #This draws the mesh to the blender scene
@@ -273,6 +301,7 @@ def DrawMeshToScreen(MeshStructure, self, CollectionName = "Sketch_to_Mesh_Colle
         # add object to scene collection
         new_collection.objects.link(new_object)
 
+
 #DrawMesh
 #Description
 #This draws the mesh to the blender scene
@@ -289,13 +318,15 @@ def DrawMesh(ColorWeAreLookingFor, PolyCount, self, PlaneArray:list[PlaneItem], 
         #FullVertList = SpaceOutPixels(ImageDictionary, PolyCount)
 
         if isComplex == True: #only happens when complex is called
-            VertList = NormaliseData(ImageDictionary)
+            VertList = NormaliseVertList(ImageDictionary)
+
             if VertList == False:  return False #ends the function before any extra work is done
             MeshStructure = GenerateEdges(VertList, "BlenderPoints")
-            DrawMeshToScreen(MeshStructure, self, "Sketch_To_Mesh_Collection", "ComplexMesh") # this is the outline of the mesh
+
+            DrawMeshToScreen(MeshStructure, self, "Sketch_To_Mesh_Collection") # this is the outline of the mesh
             PixelLineDictionary= GetLineOfPixels(ImageDictionary[0], Imagedata, Image, ColorWeAreLookingFor)
             MeshStructureLibrary = DefineDictioniesForColorsLines(PixelLineDictionary)
-            DrawMeshToScreen(MeshStructureLibrary[0], self, "Sketch_To_Mesh_Collection", "ComplexMesh")
+            DrawMeshToScreen(MeshStructureLibrary[0], self, "Sketch_To_Mesh_Collection")
         else: 
             MeshStructure = GenerateShapeEdges(ImageDictionary, PolyCount, plane, ColorWeAreLookingFor) #only called when not complex is called
             DrawMeshToScreen(MeshStructure, self) #draws all the meshes to screen
