@@ -43,6 +43,7 @@ class VIEW3D_PT_Sketch_To_Mesh_MeshSettings_Panel(bpy.types.Panel):
         layout.prop(context.scene, "FileName_Input", text="")
         row = layout.row()
         row.operator("mesh.primitive_cube_add", text="Export Mesh")
+        
 
 
 class VIEW3D_PT_Sketch_To_Mesh_Testing(bpy.types.Panel):  
@@ -70,6 +71,8 @@ class VIEW3D_PT_Sketch_To_Mesh_Testing(bpy.types.Panel):
         row.operator("wm.place_mesh", text="Place Mesh")
         row = layout.row()
         row.operator("wm.toast_notification", text="Toast Test")
+        row = layout.row()
+        row.operator("wm.camera_edge", text="Camera Test")
 
 
 

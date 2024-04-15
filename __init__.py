@@ -11,7 +11,7 @@ bl_info = {
 import bpy
 
 from .ui_operations import OBJECT_OT_add_plane_item,  Reset_Input_Images, VIEW3D_PT_Sketch_To_Mesh_Views_FilePath_Panel, PlaceImageIn3D,  TestPlaceMesh,  NotificationPopup
-from .testing_operations import DoImg, StMTestImagePrep, StMTestSaveFileToDb, StMTestConnectionOperator, StMTestGetFileFromDbFromUserId, StMTestDeleteFileFromDbFromUserId, ExportToDatabase
+from .testing_operations import DoImg, StMTestImagePrep, StMTestSaveFileToDb, StMTestConnectionOperator, StMTestGetFileFromDbFromUserId, StMTestDeleteFileFromDbFromUserId, ExportToDatabase, StMTestCameraDetection
 from .DatabaseUI import DataBaseLogin, DataBaseRegister, DataBaseUIMenu, DocumentItem, DataBaseLogout,  DataBase_UIList, DeleteFromDatabase, AccessDatabase, AddToDatabase, ImportFromDataBase
 from .base_ui import VIEW3D_PT_Sketch_To_Mesh_Panel, VIEW3D_PT_Sketch_To_Mesh_MeshSettings_Panel, VIEW3D_PT_Sketch_To_Mesh_Testing, AccessDbCustomPanel
 
@@ -63,8 +63,8 @@ def register():
     bpy.utils.register_class(StMTestSaveFileToDb) 
     bpy.utils.register_class(StMTestConnectionOperator) 
     bpy.utils.register_class(StMTestGetFileFromDbFromUserId) 
-    bpy.utils.register_class(StMTestDeleteFileFromDbFromUserId) 
-    
+    bpy.utils.register_class(StMTestDeleteFileFromDbFromUserId)  
+    bpy.utils.register_class(StMTestCameraDetection)
 
 def unregister():
     del bpy.types.Scene.poly_count_range
@@ -113,6 +113,7 @@ def unregister():
     bpy.utils.unregister_class(StMTestSaveFileToDb)
     bpy.utils.unregister_class(StMTestGetFileFromDbFromUserId)
     bpy.utils.unregister_class(StMTestDeleteFileFromDbFromUserId) 
+    bpy.utils.unregister_class(StMTestCameraDetection)
 
 if __name__ == "__main__":
     register()

@@ -333,8 +333,37 @@ def Feature_detection(self, PlaneDataArray : list[PlaneItem]):
             except Exception as e:
                 print(f"Error: {e}")
                 return False
-# example usage
-#image_path = 'C:/Users/RAFAEL MUITO ZIKA/Pictures/emoji disdcord/pekora fate.png'
-#prepared_image = prepare_image(image_path)
 
+def camera_corner(): 
+    cap = cv2.VideoCapture(0)  # '0' is usually the default value for the primary camera
+
+    if not cap.isOpened():
+        print("Cannot open camera")
+        exit()
+
+    while True:
+        
+        # capture frame by frame
+        # idk why tbh, seems to be standard
+        ret, frame = cap.read()
+        if not ret:
+            print("Can't receive frame (stream end?). Exiting ...")
+            break
+
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+        edges = cv2.Canny(gray, 50, 150)
+
+        # show both camera results
+        cv2.imshow('Original', frame)
+        cv2.imshow('Edges', edges)
+
+        if cv2.waitKey(1) == ord('q'):  # press Q to exit
+            break
+
+    # clear
+    cap.release()
+    cv2.destroyAllWindows()
+    
+    return 0
 
