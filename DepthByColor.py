@@ -5,6 +5,9 @@ from threading import Thread, Lock
 from dataclasses import dataclass
 
 mutex = Lock()
+meshMidpoint = None
+
+mutex = Lock()
 
 @dataclass
 class EdgeData:
@@ -16,6 +19,7 @@ class EdgeData:
     AllSurrondingPoints = []
     AverageColor:tuple
     ZValue:int
+    LinePoints:list
     LinePoints:list
 
     def __init__(self, Point ,NextPoint):
@@ -146,6 +150,7 @@ def GetPointsfromPoints(FullVertList:list, ImageRow, ImageColumn):
         for point in FullVertList[sides]:
             CombinedVertList[point[0]] = point[1]
 
+    MaxX = max(CombinedVertList)
     MaxX = max(CombinedVertList)
     GreatestX = (MaxX, CombinedVertList[MaxX])
 
@@ -365,6 +370,13 @@ def CycleThroughEdgePointsForColor(EdgeDataList, imageDataClass:ImageDataClass):
         CurrEdge.__setattr__('AverageColor', AverageColorList) #saves the average color for each of the instances
     
     EdgeDataList = CalculateZAxis(EdgeDataList)
+    meshMidpoint = GetMidPoint(EdgeDataList[0]) #retrieves the midpoint from current edge data
+    transposedMesh = TransposeMesh(meshMidpoint, EdgeDataList[0]) #transposes the matrix so that that points are generated that mirror the current 3d mesh
+    tempList = list(EdgeDataList[0])
+    for points in transposedMesh: #this for loop adds the transposed points to the mesh
+        tempList.append(points)
+    tempList.append(meshMidpoint)
+    EdgeDataList[0] = tempList
     return EdgeDataList
 
 #GetAverageOfSurroundingValues

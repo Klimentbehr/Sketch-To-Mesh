@@ -230,13 +230,21 @@ def SpaceOutPixels(ImageDictionary, PolyCount):
         VertList: list = [] #the vertList saves the verts that are out of the poly count distance. The vert list is kept here so it will be reset fro each side
         done = False
         ImageDictIter = (ImageDictionary[Sides]) # creates a varible to shorten formulas
+        ImageDictIter = (ImageDictionary[Sides]) # creates a varible to shorten formulas
         while not done:
+            if (1 == len(ImageDictIter)):
+                ImageListIter:list = ImageDictIter[0] 
+                NextImageListIter:list = ImageDictIter[1] 
+                VertList.append(ImageListIter) # we add the last vertex to the list 
             if (1 == len(ImageDictIter)):
                 ImageListIter:list = ImageDictIter[0] 
                 NextImageListIter:list = ImageDictIter[1] 
                 VertList.append(ImageListIter) # we add the last vertex to the list 
                 done = True; break # sets done to true so the while loop will end
             
+            if (abs(ImageListIter[0] - NextImageListIter[0]) > 50 or (abs(ImageListIter[1] - NextImageListIter[1]) > 50)): ImageDictIter = SearchForClosestPoint(ImageDictIter, NextImageListIter)
+            elif GetDistanceBetweenPoints(ImageListIter, NextImageListIter) >= PolyCount: VertList.append(NextImageListIter) # we save the next vertex into the VertList
+            del ImageDictIter[0]  
             if (abs(ImageListIter[0] - NextImageListIter[0]) > 50 or (abs(ImageListIter[1] - NextImageListIter[1]) > 50)): ImageDictIter = SearchForClosestPoint(ImageDictIter, NextImageListIter)
             elif GetDistanceBetweenPoints(ImageListIter, NextImageListIter) >= PolyCount: VertList.append(NextImageListIter) # we save the next vertex into the VertList
             del ImageDictIter[0]  
@@ -367,6 +375,9 @@ def SearchForClosestPoint(PointArray, startingPoint ):
     closestDistance = 100 #will be used to check the distance between two points
     tempIter = 0 #will loop thought the for each loop and hold a temp Iterator
     finalIter = 0 #will hold the iterator of the closest point
+
+    for nextPoint in PointArray:
+        TempDistance = abs(GetDistanceBetweenPoints(startingPoint, nextPoint)) #get the distance between the 
 
     for nextPoint in PointArray:
         TempDistance = abs(GetDistanceBetweenPoints(startingPoint, nextPoint)) #get the distance between the 
