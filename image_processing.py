@@ -2,7 +2,7 @@ import cv2
 import os
 import numpy as np
 import bpy
-
+import random
 from dataclasses import dataclass
 
 @dataclass
@@ -117,6 +117,12 @@ def outline_image(image_path, Extension, ImgName, Filedirectory):
     except Exception as e:
         print(f"Error: {e}")
         return False
+ 
+# def angle_between(p1, p2, p3):
+#     
+#     a = np.array(p1)
+#     b = np.array(p2)
+#     c = np.array(p3)
 
 def mark_corners(image_path, max_corners=100):
     """
@@ -144,6 +150,53 @@ def mark_corners(image_path, max_corners=100):
             cv2.circle(image, (x, y), 3, (255, 0, 0), -1)
     SaveImage(image, image_path, "View1")
     return cornerArray, image.shape
+
+#     # did i really just use math here
+#     ba = a - b
+#     bc = c - b
+
+#     cosine_angle = np.dot(ba, bc) / (np.linalg.norm(ba) * np.linalg.norm(bc))
+#     angle = np.arccos(cosine_angle)
+
+#     return np.degrees(angle)    
+    
+# TODO: refactor image prep function to utilize harris corner detection
+# a bunch of repeated code. 
+def find_and_color_vertices(image_path):
+    
+    # load image
+    image = cv2.imread(image_path)
+
+    # repeated code tbh
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    gray = np.float32(gray)
+    dst = cv2.cornerHarris(gray, blockSize=2, ksize=3, k=0.04)
+
+    # helps vizualizing corners
+    dst = cv2.dilate(dst, None)
+
+    # threshold for a corner. using default values
+    corners_threshold = dst > 0.01 * dst.max()
+
+    # getting the indices of corner points
+    corners = np.argwhere(corners_threshold)
+
+    corners = np.flip(corners, axis=1) # inverting y and x coordinates because np.argwhere returns in (row, column) format
+
+    num_corners = len(corners)
+
+    # drawing corners on the image
+    for x, y in corners:
+        cv2.circle(image, (x, y), 3, (0, 0, 255), -1)
+
+
+    print(f'Number of corners found: {num_corners}')
+
+    cv2.imshow('Detected Corners', image)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    
+    return corners
 
 def match_features(descriptors1, descriptors2, method='ORB'):
     # using ORB and AKAZE for testing
