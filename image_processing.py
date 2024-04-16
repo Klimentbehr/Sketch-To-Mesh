@@ -16,7 +16,6 @@ class PlaneItem:
         self.PlaneFilepath = filepath
         self.PlaneRotation = rotation
 
-
 # this will be called once the images are ready
 def prepare_image(image_path):
     
@@ -43,16 +42,12 @@ def prepare_image(image_path):
     # roi_vertices = np.array([[(50, 600), (750, 600), (400, 100)]], dtype=np.int32)
     # cv2.fillPoly(mask, roi_vertices, 255)
     # masked_edges = cv2.bitwise_and(edges, mask)
-    
-    try:
-        # its just going to try to connect and list db collection names
-        output_path = os.path.join('C:/Users/RAFAEL MUITO ZIKA/Desktop/Test', 'prepared_image.png')
-        cv2.imwrite(output_path, edges)
-        print(f"Image prep done.")
-        return True
-    except Exception as e:
-        print(f"Error: {e}")
-        return False
+    Extension =  image_path[image_path.rfind("."): ] 
+    os.chdir("ImageFolder") #changes the directory to the folder where we are going to save the file
+    cv2.imwrite("View1" + Extension, blurred_image ) #saves the image
+    os.chdir("..\\") #goes back one directory
+    return blurred_image
+
 # wth is this? why is this here and not in a proper file? why does this method even exists? sigh.
 def outline_image(image_path, Extension, ImgName, Filedirectory):
     """Read an image from a path, outline it, calculate the center of mass for the outlines, and draw a blue dot there."""
@@ -91,7 +86,7 @@ def outline_image(image_path, Extension, ImgName, Filedirectory):
     # Check if any contours were found
     if contours:
         # Draw contours on the original image
-        cv2.drawContours(resized_image, contours, -1, (0, 255, 0), 2)
+        cv2.drawContours(resized_image, contours, -1, (0, 255, 0), 10)
         # Calculate the combined center of mass for all contours
         totalX, totalY, totalArea = 0, 0, 0
 
@@ -128,6 +123,33 @@ def outline_image(image_path, Extension, ImgName, Filedirectory):
 #     a = np.array(p1)
 #     b = np.array(p2)
 #     c = np.array(p3)
+
+def mark_corners(image_path, max_corners=100):
+    """
+    Detect and mark corners of shapes in an image with blue pins.
+    :param image: Input image.
+    :param max_corners: The maximum number of corners to detect.
+    :return: Image with corners marked with blue dots.
+    """
+    image = cv2.imread(image_path)
+
+    # Convert image to grayscale
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+    # Detect corners
+    corners = cv2.goodFeaturesToTrack(gray, maxCorners=max_corners, qualityLevel=0.01, minDistance=10)
+    
+    cornerArray = []
+    # Refine the corner locations
+    if corners is not None:
+        corners = np.int0(corners)
+        for corner in corners:
+            x, y = corner.ravel()
+            cornerArray.append((y, x))
+            EditPicture((255, 0, 0), (y,x), image)
+            cv2.circle(image, (x, y), 3, (255, 0, 0), -1)
+    SaveImage(image, image_path, "View1")
+    return cornerArray, image.shape
 
 #     # did i really just use math here
 #     ba = a - b
@@ -175,7 +197,7 @@ def find_and_color_vertices(image_path):
     cv2.destroyAllWindows()
     
     return corners
-    
+
 def match_features(descriptors1, descriptors2, method='ORB'):
     # using ORB and AKAZE for testing
     if method == 'ORB':
@@ -265,7 +287,7 @@ def PlaceImage(self, GlobalPlaneDataArray:list[PlaneItem] ):
                 
                 if plane_data.ImagePlaneFilePath:
                     filename = os.path.basename(plane_data.ImagePlaneFilePath)
-                    FileDirectory = plane_data.ImagePlaneFilePath[: plane_data.ImagePlaneFilePath.rfind("\\")] + "\\"
+                    FileDirectory = r"" + plane_data.ImagePlaneFilePath[: plane_data.ImagePlaneFilePath.rfind("\\")] + "\\"
                     #bpy.ops.import_image.to_plane(files=[{"name":filename, "name":filename}], directory=FileDirectory, relative=False)
                     bpy.ops.import_image.to_plane(files=[{"name":filename, "name":filename}], directory=FileDirectory, relative=False)
                     #we set the rotation and location of each plane
@@ -337,4 +359,14 @@ def Feature_detection(self, PlaneDataArray : list[PlaneItem]):
 #image_path = 'C:/Users/RAFAEL MUITO ZIKA/Pictures/emoji disdcord/pekora fate.png'
 #prepared_image = prepare_image(image_path)
 
+def EditPicture(Color:list, Point:list, image):
+    image[Point][0] = Color[0]
+    image[Point][1] = Color[1]
+    image[Point][2] = Color[2]
+
+def SaveImage(image, filepath:str, filename:str):
+    Extension =  filepath[filepath.rfind("."): ] 
+    os.chdir("ImageFolder") #changes the directory to the folder where we are going to save the file
+    cv2.imwrite(filename + Extension, image ) #saves the image
+    os.chdir("..\\") #goes back one directory   
 

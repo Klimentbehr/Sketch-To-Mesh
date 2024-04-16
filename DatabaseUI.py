@@ -1,12 +1,24 @@
 import bpy
+from dataclasses import dataclass
 from .bcrypt_password import hash_password
 from .authentication import login_account, register_account
 from .db_operations import get_files_by_user_id, delete_files_by_object_id, save_file_to_db
 from .blender_operations import saveObj, decode_file
-from .ui_operations import User
+
+@dataclass
+class UserData:
+    UserSignedIn = False
+    user_info = []
+    user_documents = []
+    def __init__(self, SignIn):
+        self.user_info = []
+        self.user_documents = [] # testing
+        self.UserSignedIn = SignIn
+
 
 class DocumentItem(bpy.types.PropertyGroup): name= bpy.props.StringProperty(name="Document Name")
 GlobalDatabaseScene : bpy.types.Scene
+User: UserData = UserData(False)
 
 class DataBaseLogin(bpy.types.Operator):
     bl_idname = "wm.database_login"
@@ -23,7 +35,6 @@ class DataBaseLogin(bpy.types.Operator):
            
         byte_password = bpy.context.scene.DB_Password.encode('utf-8') # we need to compare plaintext and the hash! not hash against hash...
         user, result = login_account(self.DBUserNameInput, byte_password)
-
         User.user_info = user # saving the user id to the user
             
             # will be refactored!
@@ -39,7 +50,6 @@ class DataBaseLogin(bpy.types.Operator):
 
         if result == -1:
             self.report({'INFO'}, "Unregistered account. Please register")    
-
         return {'FINISHED'}
     
     def draw(self, context):    
@@ -48,7 +58,6 @@ class DataBaseLogin(bpy.types.Operator):
         row.prop(context.scene, "DB_Username", text="Username", slider=True) 
         row = layout.row()
         row.prop(context.scene, "DB_Password", text="Password", slider=True, ) 
-
 
     def invoke(self, context, event):
         return context.window_manager.invoke_props_dialog(self)
@@ -109,7 +118,6 @@ class DataBaseRegister(bpy.types.Operator):
         row = layout.row()
         row.prop(context.scene, "DB_Password", text="Password", slider=True) 
 
-
     def invoke(self, context, event):
         return context.window_manager.invoke_props_dialog(self)
 
@@ -155,28 +163,7 @@ def SetDataBaseList(context, databaseScene):
     if not hasattr(context.scene, "my_document_collection"): # we need to make sure it exists in this scene
         # create the document collection property
         bpy.types.Scene.my_document_collection = bpy.props.CollectionProperty(type=DocumentItem)
-    
-
-class DataBaseUIMenu(bpy.types.Panel):
-    bl_idname = "wm.database_ui_menu"
-    bl_label = "Database Menu"
-    bl_parent_id = "_PT_Sketch_To_Mesh_Main_Panel" 
-    bl_space_type = 'VIEW_3D'
-    bl_region_type = 'UI'
-
-    def draw(self, context):    
-        layout = self.layout
-        row = layout.row()
-        if User.UserSignedIn == False :
-            row.operator("wm.database_register", text="Register User")
-            row = layout.row()
-            row.operator("wm.database_login", text="Login User")
-        else :
-            row.operator("wm.access_database", text="Access Database") 
-            row = layout.row() 
-            row.operator("wm.user_logout", text="Logout") # TODO: logout function in authentication
-
-    
+        
 
 class DeleteFromDatabase(bpy.types.Operator):
     bl_idname = "wm.delete_from_database"
