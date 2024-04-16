@@ -335,35 +335,162 @@ def Feature_detection(self, PlaneDataArray : list[PlaneItem]):
                 return False
 
 def camera_corner(): 
-    cap = cv2.VideoCapture(0)  # '0' is usually the default value for the primary camera
+    # cap = cv2.VideoCapture(0)  # Adjust the device index if necessary
 
-    if not cap.isOpened():
-        print("Cannot open camera")
-        exit()
+    # while True:
+    #     ret, frame = cap.read()
+    #     if not ret:
+    #         break
+
+    #     # Convert to grayscale
+    #     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        
+    #     # Edge detection
+    #     edges = cv2.Canny(gray, 50, 150)
+        
+    #     # Find contours
+    #     contours, _ = cv2.findContours(edges, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+        
+    #     for cnt in contours:
+    #         # Approximate the contour to a polygon
+    #         epsilon = 0.02 * cv2.arcLength(cnt, True)
+    #         approx = cv2.approxPolyDP(cnt, epsilon, True)
+            
+    #         # If the polygon has 4 vertices, consider it as a rectangle
+    #         if len(approx) == 4:
+    #             cv2.drawContours(frame, [approx], -1, (0, 255, 0), 2)  # Draw contour in green
+                
+    #             # Draw red points on each vertex
+    #             for vertex in approx:
+    #                 x, y = vertex.ravel()
+    #                 cv2.circle(frame, (x, y), 5, (0, 0, 255), -1)  # Red point
+
+    #     # Display the resulting frame
+    #     cv2.imshow('Frame', frame)
+    #     cv2.imshow('Edges', edges)
+
+    #     if cv2.waitKey(1) == ord('q'):
+    #         break
+
+    # cap.release()
+    # cv2.destroyAllWindows()
+    
+    # Set up parameters for Harris corner detection
+    
+    cap = cv2.VideoCapture(0)
 
     while True:
-        
-        # capture frame by frame
-        # idk why tbh, seems to be standard
         ret, frame = cap.read()
         if not ret:
-            print("Can't receive frame (stream end?). Exiting ...")
             break
 
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        # Convert to HSV for better color segmentation
+        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        # Red color can be in two ranges due to how HSV works
+        lower_red1 = np.array([0, 120, 70])
+        upper_red1 = np.array([10, 255, 255])
+        lower_red2 = np.array([170, 120, 70])
+        upper_red2 = np.array([180, 255, 255])
 
-        edges = cv2.Canny(gray, 50, 150)
+        mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
+        mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
+        mask = mask1 + mask2  # Combine masks for red color
 
-        # show both camera results
-        cv2.imshow('Original', frame)
-        cv2.imshow('Edges', edges)
+        # Find contours
+        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-        if cv2.waitKey(1) == ord('q'):  # press Q to exit
+        for cnt in contours:
+            area = cv2.contourArea(cnt)
+            if area > 1000:  # Filter out small contours
+                # Approximate contour to simplify it to major points
+                epsilon = 0.02 * cv2.arcLength(cnt, True)
+                approx = cv2.approxPolyDP(cnt, epsilon, True)
+
+                # We expect around 8 corners for a visible face of a cube (since cubes can be occluded)
+                if 6 <= len(approx) <= 10:
+                    draw_cube(approx, frame)
+
+        cv2.imshow('Frame', frame)
+        if cv2.waitKey(1) == ord('q'):
             break
 
-    # clear
+    cap.release()
+    cv2.destroyAllWindows()
+    
+def camera_test():
+    
+    cap = cv2.VideoCapture(0)
+
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        # Convert to HSV for better color segmentation
+        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        # Define range for red color and create masks
+        lower_red1 = np.array([0, 120, 70])
+        upper_red1 = np.array([10, 255, 255])
+        lower_red2 = np.array([170, 120, 70])
+        upper_red2 = np.array([180, 255, 255])
+        mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
+        mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
+        mask = mask1 + mask2
+
+        # Apply morphological operations to remove small noise
+        kernel = np.ones((5, 5), np.uint8)
+        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+        mask = cv2.morphologyEx(mask, cv2.MORPH_DILATE, kernel)
+
+        # Find contours
+        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        for cnt in contours:
+            area = cv2.contourArea(cnt)
+            if area > 500:  # Consider only large enough areas
+                # Approximate the contour to simplify it
+                epsilon = 0.02 * cv2.arcLength(cnt, True)
+                approx = cv2.approxPolyDP(cnt, epsilon, True)
+
+                # Draw the contour and corners
+                cv2.drawContours(frame, [approx], -1, (0, 255, 0), 2)  # Green contour
+                for point in approx:
+                    x, y = point.ravel()
+                    cv2.circle(frame, (x, y), 5, (0, 0, 255), -1)  # Red corners
+
+        cv2.imshow('Frame', frame)
+        cv2.imshow('Mask', mask)  # Optional: show the mask
+
+        if cv2.waitKey(1) == ord('q'):
+            break
+
     cap.release()
     cv2.destroyAllWindows()
     
     return 0
+
+# Function to handle drawing the cube
+def draw_cube(approx, frame):
+    if len(approx) == 8:  # Expecting 8 corners for a typical cube projection
+        approx = sorted(approx, key=lambda x: (x[0][0], x[0][1]))
+        # Connect corners with lines to form the cube edges
+        for i in range(4):
+            x, y = approx[i][0]
+            x_next, y_next = approx[(i + 1) % 4][0]
+            cv2.line(frame, (x, y), (x_next, y_next), (255, 0, 0), 2)
+            # Connect vertical edges of the cube
+            cv2.line(frame, (x, y), approx[i + 4][0], (255, 0, 0), 2)
+        # Connect the top face edges
+        for i in range(4, 8):
+            x, y = approx[i][0]
+            x_next, y_next = approx[i + 1 if i < 7 else 4][0]
+            cv2.line(frame, (x, y), (x_next, y_next), (255, 0, 0), 2)
+
+# Function to check if the detected contour could be a face of the cube
+def is_potential_cube_face(contour, min_area=500, aspect_ratio_range=(0.8, 1.2)):
+    _, _, w, h = cv2.boundingRect(contour)
+    aspect_ratio = w / float(h)
+    area = cv2.contourArea(contour)
+    return area > min_area and aspect_ratio_range[0] <= aspect_ratio <= aspect_ratio_range[1]
+
+
 
