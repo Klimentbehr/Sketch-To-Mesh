@@ -1,4 +1,5 @@
 import cv2
+import math
 from .image_processing import PlaneItem, mark_corners, EditPicture, SaveImage
 from .DepthByColorHelper import AdjacentEdge, ImageDataClass, GetSlope, calucalateYIntercept, GetUniquePoints, CheckForInsideLines, CreateSolidLine, GetDistanceBetweenPoints, ColorCheck, GetFilledCircle
 from threading import Thread, Lock
@@ -372,6 +373,7 @@ def CycleThroughEdgePointsForColor(EdgeDataList, imageDataClass:ImageDataClass):
     EdgeDataList = CalculateZAxis(EdgeDataList)
     meshMidpoint = GetMidPoint(EdgeDataList[0]) #retrieves the midpoint from current edge data
     transposedMesh = TransposeMesh(meshMidpoint, EdgeDataList[0]) #transposes the matrix so that that points are generated that mirror the current 3d mesh
+    
     tempList = list(EdgeDataList[0])
     for points in transposedMesh: #this for loop adds the transposed points to the mesh
         tempList.append(points)
@@ -488,3 +490,46 @@ def GenerateEdges(VertList:list, request:str):
     MeshStructure[1] = edgeList
     MeshStructure[2] = []
     return MeshStructure
+
+def GetMidPoint(MeshStructure):
+    estimateMidpoints = [] #This will hold the potential midpoints before they are averaged out
+    furthestDistance = 0 #This will hold the furthest distance from one point for comparison
+    tempPoint = [1, 2, 3] #This will hold a temporary point for whatever point we need
+    for point1 in MeshStructure:
+        for point2 in MeshStructure:
+            if (point1 ==  point2): continue #if you are comparing the same point just continue on and ignore 
+            else: 
+                TempDistance = GetDistanceBetweenPoints3D(point1, point2) #If not then get the distance between the two points
+                if (TempDistance > furthestDistance): #if that distance is greater than our current greater distance then set furthest distance to temp distance
+                    furthestDistance = TempDistance
+                    furthestPoint = point2
+        #The next three points are getting the middle point between the first point and the furthest point
+        tempPoint[0] = (point1[0] + furthestPoint[0])/2
+        tempPoint[1] = (point1[1] + furthestPoint[1])/2
+        tempPoint[2] = (point1[2] + furthestPoint[2])/2
+        estimateMidpoints.append(tempPoint)
+        furthestDistance = 0 #set fursthestDistance back to 0 and do it over again
+    #Put x, y, and z elements into their own variables
+    xElements = [x[0] for x in estimateMidpoints]
+    yElements = [y[1] for y in estimateMidpoints]
+    zElements = [z[2] for z in estimateMidpoints]
+    #get the average for x, y, and z elements
+    averageX = sum(xElements) / len(estimateMidpoints)
+    averageY = sum(yElements) / len(estimateMidpoints)
+    averageZ = sum(zElements) / len(estimateMidpoints)
+    #return the midpoint constructed
+    midpoint = (averageX, averageY, averageZ)
+    return midpoint
+
+def TransposeMesh(Midpoint, Mesh):
+    transposedPoints = []
+    for point in Mesh:
+            tempPoint = list(point)
+            tempPoint[0] = (Midpoint[0] + (Midpoint[0] - point[0]))
+            tempPoint[1] = (Midpoint[1] + (Midpoint[1] - point[1]))
+            tempPoint[2] = (Midpoint[2] + (Midpoint[2] - point[2]))
+            transposedPoints.append(tempPoint)
+    return transposedPoints
+
+def GetDistanceBetweenPoints3D(point1:list, point2:list): #supporting function that just does the distance formula for 3d 
+    return math.sqrt(((point2[0]-point1[0])**2) + ((point2[1]-point1[1])**2) + ((point2[2]-point1[2])**2))
