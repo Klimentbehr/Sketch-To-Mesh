@@ -1,6 +1,6 @@
 import bpy
 from .db_operations import test_connection, save_file_to_db, get_files_by_user_id, delete_files_by_object_id # the . is on purpose. do not remove
-from .image_processing import test_feature_detection # the . is on purpose. do not remove
+from .image_processing import test_feature_detection, find_and_color_vertices # the . is on purpose. do not remove
 from .blender_operations import DrawMeshToScreen
 from .blender_operations import saveObj
 
@@ -65,13 +65,16 @@ class StMTestImagePrep(bpy.types.Operator):
     bl_description = "Test Feature Detection functionality"
 
     def execute(self, context):
-        test_feature_detection()
-        
-        #success = prepare_image(path)
-        #if success:
-        #    self.report({'INFO'}, "Image Prep Succesful!")
-        #else:
-        #    self.report({'ERROR'}, "Failed to Image Prep.")
+        #test_feature_detection()
+        path = r"C:\Users\RAFAEL MUITO ZIKA\Desktop\Test\sidee.png"
+        detected_corners = find_and_color_vertices(path)
+
+        # print cordinates for the corners
+        # TODO: figure out a way to detect less features.
+        print("Coordinates of corners:")
+        for idx, (x, y) in enumerate(detected_corners):
+            print(f"Corner {idx}: ({x}, {y})")
+
 
 # class that executes test_connection from db_operations
 # will be deleted in beta versions
