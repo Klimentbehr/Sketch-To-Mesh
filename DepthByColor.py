@@ -1,12 +1,14 @@
 import cv2
-import os
 import math
-from .image_processing import PlaneItem
+from .image_processing import PlaneItem, mark_corners, EditPicture, SaveImage
+from .DepthByColorHelper import AdjacentEdge, ImageDataClass, GetSlope, calucalateYIntercept, GetUniquePoints, CheckForInsideLines, CreateSolidLine, GetDistanceBetweenPoints, ColorCheck, GetFilledCircle, GetAverageOfAllCoordinateValuesInList, GetAverageDstBetweenPoints, getCircle, GetClosetPointsToValue, GetUniquePoints
 from threading import Thread, Lock
 from dataclasses import dataclass
 
 mutex = Lock()
 meshMidpoint = None
+
+mutex = Lock()
 
 @dataclass
 class EdgeData:
@@ -19,6 +21,7 @@ class EdgeData:
     AverageColor:tuple
     ZValue:int
     LinePoints:list
+    LinePoints:list
 
     def __init__(self, Point ,NextPoint):
         self.Point = Point
@@ -26,316 +29,255 @@ class EdgeData:
         self.slope = GetSlope(Point, NextPoint) #gets the slope of each edge
         self.Yintercept = calucalateYIntercept(Point, self.slope )
 
-    # def __init__(self, CurrPoint):
-        # self.CurrPoint = CurrPoint
-#starts from space out pixels
-def GenerateShapeEdges(FullVertList:dict, radius:int, plane:PlaneItem):
-    CombinedVertList = {}
-    image = cv2.imread(plane.ImagePlaneFilePath) 
+#GenerateShapeEdges
+#Description
+#This function create the edgedata used throughout the process of making the simplified mesh
+#At the moment it uses 2 ways of edge detection to get the needed points.
+#The first being the manual detection which finds the edges based on distance
+#The sceond being the edges openCv has found. (These edges will be used for the first state of the program)
 
-    #this should combine all of the sides into one list 
-    for sides in FullVertList:
-        for point in FullVertList[sides]:
-            CombinedVertList[point[0]] = point[1]
+#Parameters
+#radius: This is the polycount passed in from blender operations.
+#Plane: This holds the filepaths and image infomation for the image the user wants to recreate
+#ColorToLLokFor: This is the color openCv uses for outlining
 
-    MaxX = max(CombinedVertList)
-    GreatestX = (MaxX, CombinedVertList[MaxX])
-    MinX = min(CombinedVertList)
-    MiniumX = (MinX, CombinedVertList[MinX])
-    MaxY = max(CombinedVertList, key = lambda k: CombinedVertList[k])
-    GreatestY = (MaxY, CombinedVertList[MaxY])
-    MinY = min(CombinedVertList, key = lambda k: CombinedVertList[k])
-    MiniumY = (MinY, CombinedVertList[MinY])
+#Returns
+#outputlist: This is the MeshStructure of the simplified mesh
+def GenerateShapeEdges(radius:int, plane:PlaneItem, ColorToLookFor):
+    imageDataClass = ImageDataClass(radius, plane, ColorToLookFor)
+    FinishedList =[]
+    SizedEdgePoints, MulipliersValues, imageShape = GetPointsFromImage(imageDataClass.image, plane, imageDataClass.ImageShape[0], imageDataClass.ImageShape[1], radius)
+    imageDataClass.__setattr__('ImageShape', imageShape)
+    imageDataClass.__setattr__('image', cv2.resize(imageDataClass.image, (imageDataClass.ImageShape[1], imageDataClass.ImageShape[0])))
+    for points in SizedEdgePoints: FinishedList.append((round(points[0] / MulipliersValues[0]), round(points[1] / MulipliersValues[1])))
 
-    MinXValue = min(CombinedVertList, key=CombinedVertList.get)
-    TestPointvalues1 = (MinXValue, CombinedVertList[MinXValue])
-
-    MaxXvalue = max(CombinedVertList, key=CombinedVertList.get) 
-    TestPointvalues2 = (MaxXvalue, CombinedVertList[MaxXvalue])
-
-    GreatestXsmallestY = (0, 0)
-    GreatestYsmallestX = (0, 0)
-
-    #sets the greatest value to the smallest value we can get
-    GreatestCurrentValue = (0, (0,0))
-    #sets the smallest value to the larger value we can get
-    SmallestCurrValue = (GetDistanceBetweenPoints((0,0), (image.shape[0], image.shape[1])), (image.shape[0], image.shape[1]))
-
-    CurrSmallBottomvalue = SmallestCurrValue
-    GreatestPointvalues = (0, (0,0))
-    SmallestPointvalues = (10000, (0,0))
-
-
-    for Xvalue in CombinedVertList:
-        YAxis = CombinedVertList[Xvalue] #saves the y value of the list to a more readable varible
-        PointDst = GetDistanceBetweenPoints((0,0), (Xvalue, YAxis))
-        PointValue = Xvalue + YAxis 
-        PointDstBottom = GetDistanceBetweenPoints((image.shape[0], image.shape[1]), (Xvalue, YAxis)) 
-
-        if(PointValue < SmallestPointvalues[0]): SmallestPointvalues = (PointValue, (Xvalue, YAxis) )
-        if(PointValue > GreatestPointvalues[0]): GreatestPointvalues = (PointValue, (Xvalue, YAxis) )
-
-        
-        if (PointDst > GreatestCurrentValue[0]): GreatestCurrentValue = (PointDst, (Xvalue, YAxis))
-        if (PointDst < SmallestCurrValue[0]): SmallestCurrValue = (PointDst, (Xvalue, YAxis))
-        
-        if PointDstBottom < CurrSmallBottomvalue[0]: CurrSmallBottomvalue = (PointDstBottom, (Xvalue, YAxis))
-
-        #we also what the hightest of the Xvalue with the Lowest of Y values and Vice versa
-        if (CalculateGreatestAxisWithsmallestAxis((Xvalue, YAxis), GreatestXsmallestY, "X")) : GreatestXsmallestY = (Xvalue, YAxis)
-        if (CalculateGreatestAxisWithsmallestAxis((Xvalue, YAxis), GreatestXsmallestY, "Y")): GreatestYsmallestX = (Xvalue, YAxis)
-
-    GreatestValue = GreatestCurrentValue[1]
-    SmallestValue = SmallestCurrValue[1]
-    BottomValue = CurrSmallBottomvalue[1]
-    GreatestPointvalue = GreatestPointvalues[1]
-    SmallestPointValues = SmallestPointvalues[1]
-
-    #GreatestY -> GreatestX ->GreatestXGreatestY ->GreatestXsmallestY -> SmallestY -> SmallestXSmallestY ->SmallestXGreatestY -> smallestX
-    #we make the list in this order so they match up
-    EdgeList = [BottomValue, GreatestPointvalue, TestPointvalues2, GreatestX , GreatestXsmallestY, TestPointvalues1, MiniumY, SmallestValue, MiniumX, GreatestValue]
-    
-    #we then check for any repeated values
-    FinishedList = []
-    FinishedList.append(EdgeList[0]) #we add the first element in the array to get it started
-
-    for CheckingEdge in EdgeList:
-        AddThis = False
-        RepeatValue = False
-        for elements in FinishedList:
-            if CheckingEdge != elements and RepeatValue == False:  AddThis = True
-            else: RepeatValue = True
-
-        if AddThis and RepeatValue == False: 
-            FinishedList.append(CheckingEdge)
-            
-    EdgeDataList = CreateEdgeData(FinishedList)
-    EdgeDataListandImage = CalculateLocationsOfAvaliblePixelsAroundPoint(EdgeDataList, radius, plane)
-    outputlist = CycleThroughEdgePointsForColor(EdgeDataListandImage, plane)
+    for points in FinishedList:
+        EditPicture((0,0,0), points, imageDataClass.image)
+        SaveImage(imageDataClass.image, plane.ImagePlaneFilePath, "View0")
+ 
+    EdgeDataList = CreateEdgeData(FinishedList, imageDataClass)
+    EdgeDataList = CalculateLocationsOfAvaliblePixelsAroundPoint(EdgeDataList, imageDataClass)
+    outputlist = CycleThroughEdgePointsForColor(EdgeDataList, imageDataClass)
     return outputlist
 
-def CalculateGreatestAxisWithsmallestAxis(Point1:list, Point2:list, GreaterVal:str):
-    returnBool = False
-    if GreaterVal == "X": GreaterVal = 0; SmallVal = 1
-    else: GreaterVal = 1; SmallVal = 0
-    
-    if Point1[GreaterVal] > Point2[GreaterVal]:
-        if Point1[SmallVal] < Point2[SmallVal]: returnBool = True
-        else:
-            dist1 =Point1[GreaterVal] - Point1[SmallVal]
-            dist2 = Point2[GreaterVal] - Point2[SmallVal]
-            if dist1 > dist2: returnBool = True
-    return returnBool
+#GetPointsFromImage
+#Description
+#This function is gets the part of the edgePoints from OpenCv. 
 
-def CreateEdgeData(FinishedList:list):
+#Parameters
+#image: This is the image generated from the plane information
+#plane: This holds the filepaths and image infomation for the image the user wants to recreate
+#ImageRow: This is the width of the image
+#ImageColumn: This is the Lebngth of the image
+
+#Returns
+#This function returns the list of edgePoint coordinates, The Sizers for the row and column of the image, and the size of the oringinal image
+def GetPointsFromImage(image, plane:PlaneItem, ImageRow, ImageColumn, radius):
+    CvEdgePointArray, imageShape = mark_corners(plane.PlaneFilepath)
+    EdgeImageRow = imageShape[0] -1
+    EdgeImageColumn = imageShape[1] -1
+    EnlargedImageRowMultiplier = ImageRow / EdgeImageRow
+    EnlargedImageColumnMultiplier = ImageColumn / EdgeImageColumn
+    EdgePointArray = []
+    EdgepointsForCircle = []
+    EdgePoints=[]
+
+    for point in CvEdgePointArray:
+        EnlargedRow = round(point[0] * EnlargedImageRowMultiplier)
+        EnlargedColummn = round(point[1] * EnlargedImageColumnMultiplier)
+        EdgePointArray.append((EnlargedRow, EnlargedColummn))
+        
+    AveragePoint = GetAverageOfAllCoordinateValuesInList(EdgePointArray)
+    AverageValueTODstCircle = GetAverageDstBetweenPoints(EdgePointArray, AveragePoint)
+    CirclePoints = getCircle(AveragePoint, image, AverageValueTODstCircle+round(EnlargedRow), True)
+    for CircleEdges in CirclePoints: #CirclePoints in a list of lists so we searchthrough each list to see if there are any edges
+        EdgepointsForCircle = EdgepointsForCircle + GetClosetPointsToValue(EdgePointArray, CircleEdges)
+    EdgePoints = OrderPoints(GetUniquePoints(EdgepointsForCircle))
+    EdgePoints.remove(EdgePoints[-1])
+    return EdgePoints, (EnlargedImageRowMultiplier, EnlargedImageColumnMultiplier), (imageShape[0], imageShape[1])
+ 
+
+def OrderPoints(circle_points):
+    ordered_list = []
+    CurrPoint = circle_points[0]
+    ordered_list.append(CurrPoint)
+    not_done = True
+    iter = 0
+    while not_done:
+        NextValue = (float('inf'), (0, 0))
+        for point in circle_points:
+            if CurrPoint == point or point in ordered_list: continue
+            else:
+                distance = abs(GetDistanceBetweenPoints(point, CurrPoint))
+                if distance < NextValue[0]: NextValue = (distance, point)
+        CurrPoint = NextValue[1]
+        ordered_list.append(CurrPoint)
+        iter = iter + 1
+        if iter == len(circle_points): not_done = False
+        
+    return ordered_list
+
+
+#CreateEdgeData
+#Description
+#This is a function creates a EdgeData structure fror each of the points calculated from the GenerateShapeEdges function
+
+#Parameters
+#FinishedList: This is the coordinates of the edge points passed in 
+#imagedataClass: This holds the imageData, radius, and plane for the image
+
+#Returns
+#This returns part of edgePoints structure for each of the coordinates passed in
+def CreateEdgeData(FinishedList:list, imageDataClass:ImageDataClass):
     iter = 1
     EdgeDataList = {}
-
+    #ThreadList = []
     for edgepoint in FinishedList: #collects line information for the edgedata list
-        #threadToRun = threading.Thread(target=ThreadingFunctionForCreatingEdgedata, args=(FinishedList, plane, EdgeDataList, edgepoint, iter))
-        #ThreadingFunctionForCreatingEdgedata(FinishedList:list, plane:PlaneItem, EdgeDataList, edgepoint)
+        #threadToRun = Thread(target=ThreadingFunctionForCreatingEdgedata, args=(FinishedList, EdgeDataList, edgepoint, iter, image, plane))
+        #ThreadList.append(threadToRun)
+        #threadToRun.start()
         if iter >= FinishedList.__len__(): NextPoint = FinishedList[0] #if we get to the last place in the array that means we've come to the point right before the beginning
         else : NextPoint = FinishedList[iter] #we first get the next point in the list
+        #mutex.acquire();  mutex.release()
         iter = iter + 1
-        
+        Color =(0,0,0)
         EdgeDataList[edgepoint] = EdgeData(edgepoint, NextPoint) # creates a new edgedata
         CurrEdgePoint:EdgeData = EdgeDataList[edgepoint] # allows us to access the data class
-        Linedata = SolidifyEdgePointlines(calculateLine(edgepoint, NextPoint, CurrEdgePoint.slope, CurrEdgePoint.Yintercept)) #solidifies the line we just made
+        Linedata = CreateSolidLine(edgepoint, NextPoint) #solidifies the line we just made
+        #mutex.acquire()
+
+        for points in Linedata: EditPicture(Color, points, imageDataClass.image)
+        SaveImage(imageDataClass.image, imageDataClass.plane.ImagePlaneFilePath, "View0")
+        #mutex.release()
         CurrEdgePoint.__setattr__('LinePoints', Linedata)
-    
+        #for threads in ThreadList:threads.join()    
+    AdjacentPoint:AdjacentEdge = CheckForInsideLines(imageDataClass, EdgeDataList)
+    for adjacentLines in AdjacentPoint.AdjacentLine: 
+        for points in AdjacentPoint.AdjacentLine[adjacentLines]: #adds on the extras lines 
+            EditPicture(Color, points, imageDataClass.image)
+            SaveImage(imageDataClass.image, imageDataClass.plane.ImagePlaneFilePath, "View0")
     return EdgeDataList
 
-def calculateLine(Point, NextPoint, slope, Yintercept):
-    LineData = []
-    Range, StartingVal = GetStartingValues(Point[0], NextPoint[0])
-    
-    for XValue in range(Range+1): #we loop through the x ranges
-        XValue = StartingVal + XValue
-        Yvalue = (slope * XValue) + Yintercept #we use the y = mx + c formula to find the points in the line
-        LineData.append((round(XValue), round(Yvalue))) #assigns the Y value to the Xkey
-    return LineData
+#ThreadingFunctionForCreatingEdgedata
+#Description
+#This is a function ulitizes multi-Threading to get the points around a edgePoint and then check if that point is with in the dot
 
-def SolidifyEdgePointlines(Linedata:list):
-    NewLinePoints = []
-    iter = 1
-    for point in Linedata:
-        try: NextPoint = Linedata[iter]
-        except: NextPoint = 0
-        iter = 1 + iter
+#Parameters
+#EdgeList: this iss the list of edgepoints. Dict format: Key: Coordinate of EdgePoint (x, y). Value: The EdgePoint dataclass
+#imagedataClass: This holds the imageData, radius, and plane for the image
 
-        if NextPoint == 0: break #if there is no nextPoint we are at the end of the list
-        elif (point[0]+1, point[1]) == NextPoint or (point[0]-1, point[1])== NextPoint or (point[0], point[1]+1) == NextPoint or (point[0], point[1]-1) == NextPoint or (point[0]+1, point[1]+1) == NextPoint or (point[0]-1, point[1]-1) == NextPoint or (point[0]+1, point[1]-1) == NextPoint or (point[0]-1, point[1]+1) == NextPoint:
-            continue
-        else:
-            pointDifferenceX, StartingPointX =  GetStartingValues(point[0], NextPoint[0])
-            pointDifferenceY, StartingPointY =  GetStartingValues(point[1], NextPoint[1])
-
-            for Xval in range(pointDifferenceX):
-                for Yval in range(pointDifferenceY):
-                    NewLinePoints.append(((StartingPointX + Xval), (StartingPointY + Yval))) #inserts the new point where it should be in the list
-    
-    for newpoints in NewLinePoints: Linedata.append(newpoints) #adds the new points to the dictionary
-    return Linedata
-
-def GetStartingValues(point, otherPoint):
-    if point > otherPoint :
-        pointDifferenceX = point - otherPoint
-        StartingPointX = otherPoint
-    else : 
-        pointDifferenceX = otherPoint - point
-        StartingPointX = point
-    return pointDifferenceX, StartingPointX
-
-def CalculateLocationsOfAvaliblePixelsAroundPoint(EdgeDataList:dict, radius:int, plane:PlaneItem):
-    image = cv2.imread(plane.ImagePlaneFilePath) 
+#Returns
+#This return the EDgeDataList which holds the updated Edgedata information
+def CalculateLocationsOfAvaliblePixelsAroundPoint(EdgeDataList:dict, imageDataClass:ImageDataClass):
     LinePointDictionary = UnravelEdgePointLines(EdgeDataList)  #Unpacks al of the line data
-    
     threadlist = []
-    for points in EdgeDataList:
-       threadToRun = Thread(target=ThreadingFunctionForMakingDotsAndCheckingCollisions, args=(points, EdgeDataList, image, radius, [image.shape[0], image.shape[1]], LinePointDictionary))
-       threadToRun.start()
-       threadlist.append(threadToRun)
 
+    for points in EdgeDataList:
+       threadToRun = Thread(target=ThreadingFunctionForMakingDotsAndCheckingCollisions, args=(points, EdgeDataList, LinePointDictionary, imageDataClass))
+       threadlist.append(threadToRun)
+       threadToRun.start()
+       
     for threads in threadlist: threads.join() #joins the threads after they have started running
     return EdgeDataList
 
-def UnravelEdgePointLines(edgepointList ):
+#UnravelEdgePointLines
+#Description
+#This is a function takes the points in the lines connecting the the edgepoints and gets each point in the line and adds it to a dictionary
+
+#Parameters
+#EdgeList: this is the list of edgepoints. Dict format: Key: Coordinate of EdgePoint (x, y). Value: The EdgePoint dataclass
+
+#Returns
+#This returns the new dictionary with the points in the line as the key and a boolean for the value
+def UnravelEdgePointLines(EdgeList:dict):
     LineDictionary = {}
-    for points in edgepointList:
-        edgepoint:EdgeData = edgepointList[points] 
+
+    for points in EdgeList:
+        edgepoint:EdgeData = EdgeList[points] 
         for linepoint in edgepoint.LinePoints:  LineDictionary[linepoint] = True
+
     return LineDictionary
 
-def ThreadingFunctionForMakingDotsAndCheckingCollisions(points, EdgeDataList:list, image, radius, imagedata, LinePointDictionary):
-    #Gets all the srounding points and saves the data to the individual instances
-    EdgeDataList[points].__setattr__('AllSurrondingPoints', makeDot(EdgeDataList[points].Point, radius, imagedata))
+#ThreadingFunctionForMakingDotsAndCheckingCollisions
+#Description
+#This function creates the area surrounding the points and checks for the collision for each of the point calucated
+
+#Parameters
+#points:This is the coordinate of the edgepoint we are testing
+#imagedataClass: This holds the imageData, radius, and plane for the image
+#LinePointDictionary: This is the dictionary of the points. Dict format: Key: Coordinate of linePoint (x, y). Value: Boolean
+#EdgeList: this is the list of edgepoints. Dict format: Key: Coordinate of EdgePoint (x, y). Value: The EdgePoint dataclass
+#imagedataClass: This holds the imageData, radius, and plane for the image
+
+#Returns
+#This returns the new dictionary
+def ThreadingFunctionForMakingDotsAndCheckingCollisions(points, EdgeDataList:dict, LinePointDictionary, imageDataClass:ImageDataClass):
+    EdgeDataList[points].__setattr__('AllSurrondingPoints', GetFilledCircle(points, imageDataClass))#Gets all the srounding points and saves the data to the individual instances
+
     PointToBeCheckedForColorList = [] #this list holds the data for each of the instances
 
     for pointToCheck in EdgeDataList[points].AllSurrondingPoints:#loops thorugh all the points in the points surrounding the edgepoint
-        EditPicture((123, 123, 124), pointToCheck, image) # displays the active points on screen
-         #we check if the points are inside the shape
-        if CalculateCollision(pointToCheck, imagedata, LinePointDictionary) == True: PointToBeCheckedForColorList.append(pointToCheck)  #the points we want check for color
-        elif CalculateCollsionWithY(pointToCheck, imagedata, LinePointDictionary) == True:PointToBeCheckedForColorList.append(pointToCheck)  #the points we want check for color
-            
+        EditPicture((123, 123, 124), pointToCheck, imageDataClass.image) # displays the active points on screen# we check if the points are inside the shape
+        if CalculateCollision(pointToCheck, LinePointDictionary, imageDataClass) == True: PointToBeCheckedForColorList.append(pointToCheck)  #the points we want check for color
+    mutex.acquire()
+    SaveImage(imageDataClass.image, imageDataClass.plane.ImagePlaneFilePath, "View0")
+    mutex.release()
     EdgeDataList[points].__setattr__('PointToBeCheckedForColor', PointToBeCheckedForColorList)#sets the points to be checked to the unquie instance
-def makeDot(CenterPoint:list, radius, imagedata):
-    CurrSurroundingVals = []
 
-    for CurrRad in range(radius):
-        #if we cant move at all
-        if CenterPoint[0] + CurrRad > imagedata[0] and CenterPoint[1] + CurrRad > imagedata[1] and CenterPoint[0] - CurrRad< 0 and CenterPoint[1] - CurrRad< 0: 
-            return CurrSurroundingVals
+#CalculateCollision
+#Description
+#This function creates the area surrounding the points and checks for the collision for each of the point calucated
 
-        # if we can go to the left or right
-        elif CenterPoint[0] + CurrRad > imagedata[0] and CenterPoint[0] - CurrRad < 0: 
-            CurrSurroundingVals.append((CenterPoint[0], (CenterPoint[1] + CurrRad))) # top point
-            CurrSurroundingVals.append((CenterPoint[0],(CenterPoint[1] - CurrRad))) # bottom point
+#Parameters
+#pointWeCheck:This is the coordinate of the edgepoint we are testing
+#imagedataClass: This holds the imageData, radius, and plane for the image
+#LinePointDictionary: This is the dictionary of the points. Dict format: Key: Coordinate of linePoint (x, y). Value: Boolean
 
-        #if we cant go up or down
-        elif CenterPoint[1] + CurrRad > imagedata[1] and CenterPoint[1] - CurrRad < 0: 
-            CurrSurroundingVals.append(((CenterPoint[0] + CurrRad), CenterPoint[1]))# right point
-            CurrSurroundingVals.append(((CenterPoint[0] - CurrRad), CenterPoint[1]))# left point
-
-         # if we cannot go to the right
-        elif CenterPoint[0] + CurrRad > imagedata[0]:
-            CurrSurroundingVals.append(((CenterPoint[0] - CurrRad), CenterPoint[1])) # left point
-            CurrSurroundingVals.append((CenterPoint[0], (CenterPoint[1] + CurrRad))) # top point
-            CurrSurroundingVals.append((CenterPoint[0],(CenterPoint[1] - CurrRad))) # bottom point
-            CurrSurroundingVals.append(((CenterPoint[0] - CurrRad), (CenterPoint[1] + CurrRad))) # left point
-            CurrSurroundingVals.append(((CenterPoint[0] - CurrRad) ,(CenterPoint[1] - CurrRad)))# bottom point
-
-        #if we cannot go to the left
-        elif CenterPoint[0] - CurrRad < 0:
-            CurrSurroundingVals.append(((CenterPoint[0] + CurrRad), CenterPoint[1]))# right point
-            CurrSurroundingVals.append((CenterPoint[0], (CenterPoint[1] + CurrRad))) # top point
-            CurrSurroundingVals.append((CenterPoint[0],(CenterPoint[1] - CurrRad))) # bottom point
-            CurrSurroundingVals.append(((CenterPoint[0] + CurrRad), (CenterPoint[1] + CurrRad))) # right point
-            CurrSurroundingVals.append(((CenterPoint[0] + CurrRad), (CenterPoint[1] - CurrRad))) # top point
-        
-        #if we cant go down
-        elif CenterPoint[1] - CurrRad < 0:
-            CurrSurroundingVals.append(((CenterPoint[0] + CurrRad), CenterPoint[1])) # right point
-            CurrSurroundingVals.append(((CenterPoint[0] - CurrRad), CenterPoint[1])) # left point
-            CurrSurroundingVals.append((CenterPoint[0], (CenterPoint[1] + CurrRad))) # top point
-            CurrSurroundingVals.append(((CenterPoint[0] + CurrRad), (CenterPoint[1] + CurrRad))) # right point
-            CurrSurroundingVals.append(((CenterPoint[0] - CurrRad), (CenterPoint[1] + CurrRad))) # left point
-
-        #if we cant go up
-        elif CenterPoint[1] + CurrRad > imagedata[1]:
-            CurrSurroundingVals.append(((CenterPoint[0] + CurrRad), CenterPoint[1])) # right point
-            CurrSurroundingVals.append(((CenterPoint[0] - CurrRad), CenterPoint[1])) # left point
-            CurrSurroundingVals.append((CenterPoint[0],(CenterPoint[1] - CurrRad))) # bottom point
-            CurrSurroundingVals.append(((CenterPoint[0] + CurrRad), (CenterPoint[1] - CurrRad)))# top point
-            CurrSurroundingVals.append(((CenterPoint[0] - CurrRad) ,(CenterPoint[1] - CurrRad))) # bottom point
-
-        #if we have no restrictions
-        else:
-            CurrSurroundingVals.append(((CenterPoint[0] + CurrRad), CenterPoint[1])) # right point
-            CurrSurroundingVals.append(((CenterPoint[0] - CurrRad), CenterPoint[1])) # left point
-            CurrSurroundingVals.append((CenterPoint[0], (CenterPoint[1] + CurrRad))) # top point
-            CurrSurroundingVals.append((CenterPoint[0],(CenterPoint[1] - CurrRad))) # bottom point
-
-            CurrSurroundingVals.append(((CenterPoint[0] + CurrRad), (CenterPoint[1] + CurrRad))) # right point
-            CurrSurroundingVals.append(((CenterPoint[0] - CurrRad), (CenterPoint[1] + CurrRad))) # left point
-            CurrSurroundingVals.append(((CenterPoint[0] + CurrRad), (CenterPoint[1] - CurrRad))) # top point
-            CurrSurroundingVals.append(((CenterPoint[0] - CurrRad) ,(CenterPoint[1] - CurrRad))) # bottom point
-
-            for vals in range(CurrRad):
-                if vals == 0: continue #skips the 0
-                else:
-                    CurrSurroundingVals.append(((CenterPoint[0] - CurrRad + vals), (CenterPoint[1] + vals)))#leftpoint to TopPoint
-                    CurrSurroundingVals.append(((CenterPoint[0] - CurrRad + vals), (CenterPoint[1] - vals)))#leftpoint to BottomPoint
-                    CurrSurroundingVals.append(((CenterPoint[0] + CurrRad - vals), (CenterPoint[1] + vals)))#rightpoint to TopPoint
-                    CurrSurroundingVals.append(((CenterPoint[0] + CurrRad - vals), (CenterPoint[1] - vals)))#rightpoint to BottomPoint
-
-    CheckedCurrSurroundingVals = []
-    for points in CurrSurroundingVals:
-        if points[0] == imagedata[0]: continue
-        elif points[1] == imagedata[1]: continue
-        else: CheckedCurrSurroundingVals.append(points)
-
-    return CheckedCurrSurroundingVals
-
-def CalculateCollision(pointWeCheck:list, imagedata:list, LinePointDictionary:dict): #use when we grab the colors surronding each edge
-    XCheck = pointWeCheck[0]
-    CollisonCount = 0
+#Returns
+#ReturnBool: Return true if the point is within the shape
+def CalculateCollision(pointWeCheck:list, LinePointDictionary:dict, imageDataClass:ImageDataClass): #use when we grab the colors surronding each edge
+    Check = 0
+    XCollisonCount = 0
+    YCollisonCount = 0
     ReturnBool = False
+
     #if we start on the line
     if LinePointDictionary.get((pointWeCheck[0], pointWeCheck[1])): ReturnBool = True
-        
-    while (ReturnBool == False and CollisonCount < 2 and XCheck < imagedata[0]):
-        if LinePointDictionary.get((XCheck, round(pointWeCheck[1]))): CollisonCount = CollisonCount + 1 # Checks how many times our point collides with the shape
-        XCheck = XCheck + 1 #if one we know the point is inside of the shape
-    if CollisonCount == 1: ReturnBool = True
+
+    while (ReturnBool == False and XCollisonCount < 2 and pointWeCheck[0] + Check < imageDataClass.ImageShape[0] and pointWeCheck[1] + Check < imageDataClass.ImageShape[1]):
+        if LinePointDictionary.get((pointWeCheck[0], (pointWeCheck[1] + Check))): YCollisonCount = YCollisonCount + 1
+        if LinePointDictionary.get(((pointWeCheck[0] + Check), round(pointWeCheck[1]))): XCollisonCount = XCollisonCount + 1 # Checks how many times our point collides with the shape
+        Check = Check + 1 #if one we know the point is inside of the shape
+    if XCollisonCount == 1: ReturnBool = True
+    elif YCollisonCount == 1: ReturnBool = True
 
     return ReturnBool
 
-def CalculateCollsionWithY(pointWeCheck:list, imagedata:list, LinePointDictionary:dict):
-    YCheck = pointWeCheck[1]
-    CollisonCount = 0
-    ReturnBool = False
-        
-    while (ReturnBool == False and CollisonCount < 2 and YCheck < imagedata[1]):
-        if LinePointDictionary.get((pointWeCheck[0], YCheck)): CollisonCount = CollisonCount + 1 # Checks how many times our point collides with the shape
-        YCheck = YCheck + 1 #if one we know the point is inside of the shape
-    if CollisonCount == 1: ReturnBool = True
 
-    return ReturnBool
+#CycleThroughEdgePointsForColor
+#Description
+#This function loops through the pixels and stores the color inside the AverageColor list in the Edgedata
 
-def CycleThroughEdgePointsForColor(EdgeDataList, plane:PlaneItem):
-    outputlist = []
-    ImageToBeResized = cv2.imread(plane.PlaneFilepath)
+#Parameters
+#pointWeCheck:This is the coordinate of the edgepoint we are testing
+#imagedataClass: This holds the imageData, radius, and plane for the image
+#LinePointDictionary: This is the dictionary of the points. Dict format: Key: Coordinate of linePoint (x, y). Value: Boolean
+
+#Returns
+#EdgeDataList: Returns the updated Edgedata list
+def CycleThroughEdgePointsForColor(EdgeDataList, imageDataClass:ImageDataClass):
+    OringalImage= cv2.imread(imageDataClass.plane.PlaneFilepath)
     AverageColorList = []
-    image = cv2.resize(ImageToBeResized, (800, 600)) #we resize the orginal image to get the colors that are present in the orginal
 
     for edges in EdgeDataList: 
         CurrEdge:EdgeData = EdgeDataList[edges]
-        AverageColorList = GetAverageOfSurroundingValues(CurrEdge, image)
+        AverageColorList = GetAverageOfSurroundingValues(CurrEdge, OringalImage)
         CurrEdge.__setattr__('AverageColor', AverageColorList) #saves the average color for each of the instances
     
     EdgeDataList = CalculateZAxis(EdgeDataList)
     meshMidpoint = GetMidPoint(EdgeDataList[0]) #retrieves the midpoint from current edge data
     transposedMesh = TransposeMesh(meshMidpoint, EdgeDataList[0]) #transposes the matrix so that that points are generated that mirror the current 3d mesh
+    
     tempList = list(EdgeDataList[0])
     for points in transposedMesh: #this for loop adds the transposed points to the mesh
         tempList.append(points)
@@ -343,16 +285,33 @@ def CycleThroughEdgePointsForColor(EdgeDataList, plane:PlaneItem):
     EdgeDataList[0] = tempList
     return EdgeDataList
 
-def GetAverageOfSurroundingValues(EdgePoint:EdgeData, image):
+#GetAverageOfSurroundingValues
+#Description
+#Calculates the average values of the indivdual points and then gets the average of those colors
+
+#Parameters
+#EdgeList: this is the list of edgepoints. Dict format: Key: Coordinate of EdgePoint (x, y). Value: The EdgePoint dataclass
+#oringalImage: We get the colors from the orginal image instead of the updated image
+
+#Returns
+#EdgeDataList: Returns the updated Edgedata list
+def GetAverageOfSurroundingValues(EdgeDataList:EdgeData, oringalImage):
     AverageColor = []
     Colorvalues = (0, 0, 0)
-    for points in EdgePoint.PointToBeCheckedForColor: 
-        Colorvalues = [Colorvalues[0] + int(image[points][0]), Colorvalues[1] + int(image[points][1]), Colorvalues[2] + int(image[points][2])]   
-
-    for Colors in Colorvalues: 
-        AverageColor.append(Colors / EdgePoint.PointToBeCheckedForColor.__len__())
+    for points in EdgeDataList.PointToBeCheckedForColor: Colorvalues = [Colorvalues[0] + int(oringalImage[points][0]), Colorvalues[1] + int(oringalImage[points][1]), Colorvalues[2] + int(oringalImage[points][2])]   
+    for Colors in Colorvalues: AverageColor.append(Colors / EdgeDataList.PointToBeCheckedForColor.__len__())
     return AverageColor
 
+#CalculateZAxis
+#Description
+#Calculats the Z axis based on the average color of the near by points
+
+#Parameters
+#EdgeList: this is the list of edgepoints. Dict format: Key: Coordinate of EdgePoint (x, y). Value: The EdgePoint dataclass
+#oringalImage: We get the colors from the orginal image instead of the updated image
+
+#Returns
+#MeshStructure: the structure of the map. This dictionary has intergers as the keys and has the VErtices, Edges, and Faces 
 def CalculateZAxis(EdgeDataList:dict):
     ZValuesList = []
     XList = []
@@ -377,19 +336,37 @@ def CalculateZAxis(EdgeDataList:dict):
     MeshStructure = GenerateEdges(FinalEdgeData, "BlenderPoints")
     return MeshStructure
 
+#NormaliseData
+#Description
+#Normlizes the list of point input
 
+#Parameters
+#List: The list of values that need to be normalized
+
+#Returns
+#UpdatedList: Contained the updated list with the normalised values
 def NormaliseData(List:list):
-    NewList = []
+    UpdatedList = []
     if not List: return False
     else: 
         for element in List:  
             if  min(List) == max(List):
-                NewList.append(0)
+                UpdatedList.append(0)
             else:
                 norm = (element - min(List)) / (max(List) - min(List))
-                NewList.append(norm)
-    return NewList
+                UpdatedList.append(norm)
+    return UpdatedList
 
+#GenerateEdges
+#Description
+#Generates the meshstructure for a list of Verts passed in
+
+#Parameters
+#VertList: The list of values that need to be put into the blender meshStructre
+#request: The way our meshStructre will be structure
+
+#Returns
+#UpdatedList: Contained the updated list with the normalised values
 def GenerateEdges(VertList:list, request:str):
     MeshStructure = {}
     edgeList = []
@@ -400,6 +377,11 @@ def GenerateEdges(VertList:list, request:str):
             else:
                 edgeList.append((verts, iterator))
                 iterator = iterator + 1
+
+    if request == "BlenderPointsLineStyle":
+        for verts in range(VertList.__len__()): #this will get the vertical edges for the mesh.
+            edgeList.append((verts, iterator))
+            iterator = iterator + 1
 
     elif request == "2DPoints":
         for verts in VertList: #this will get the vertical edges for the mesh.
@@ -412,119 +394,6 @@ def GenerateEdges(VertList:list, request:str):
     MeshStructure[1] = edgeList
     MeshStructure[2] = []
     return MeshStructure
-
-def EditPicture(Color:list, Point:list, image):
-    image[Point][0] = Color[0]
-    image[Point][1] = Color[1]
-    image[Point][2] = Color[2]
-
-def SaveImage(image, plane:PlaneItem):
-    os.curdir
-    Extension =  plane.PlaneFilepath[plane.PlaneFilepath.rfind("."): ] 
-    os.chdir("ImageFolder") #changes the directory to the folder where we are going to save the file
-    cv2.imwrite("View0" + Extension, image ) #saves the image
-    os.chdir("..\\") #goes back one directory   
-
-
-def CheckForInsideLines(EdgeList:dict, radius, image, Color):
-    for points in EdgeList:
-        ConfirmedPoints = CalculateCircumference(radius, points, image, Color)
-        for ConfirmedPoints in ConfirmedPoints:
-            lastPointOnLine = CheckLineDst(ConfirmedPoints, points)
-            if EdgeList.get(lastPointOnLine): break
-            else: CheckForInsideLines(EdgeList, radius, image, Color)
-
-
-def CalculateCircumference(radius:int, center:list, image, Color):
-    right = ((center[0] + radius, center[1]), [] , 0 , 0, [])
-    left = ((center[0] - radius, center[1]), [] , 0 , 0, [])
-    up = ((center[0], center[1] + radius), [] , 0 , 0, [])
-    down = ((center[0], center[1] -radius), [] , 0 , 0, [])
-
-    up[1] = right[0]
-    right[1] = down[0]
-    down[1] =left[0]
-    left[1] = up[0]
-
-    CardinalPoints = [up, right, down, left]
-    PointsToCheckForDst = []
-    for points in CardinalPoints:
-        points[2] = GetSlope(points[0], points[1])
-        points[3] = calucalateYIntercept(points[0], points[2])
-        points[4] = SolidifyEdgePointlines(calculateLine(points[0], points[1], points[2], points[3]))
-        for morePoints in points[4]:
-            if ColorCheck(image, morePoints, Color): PointsToCheckForDst.append(morePoints)
-    
-    ConfirmedPoints = []
-    for points in PointsToCheckForDst:
-        for morePoints in PointsToCheckForDst:
-            if points == morePoints: continue
-            if abs(GetDistanceBetweenPoints(points, morePoints)) <= radius: ConfirmedPoints.append(points)
-    
-    return ConfirmedPoints
-
-def CheckLineDst(ConfirmedPoint, edgePoint, image, Color):
-    CurrPoint = ConfirmedPoint
-    OldPoints = []
-
-    #while the point we are Currently on is still green we will check the 
-    while (image[CurrPoint][0], image[CurrPoint][1], image[CurrPoint][2]) == Color and CurrPoint[0] < image.shape[0] and CurrPoint[1] < image.shape[1]:
-        right = (CurrPoint[0] + 1, CurrPoint[1])
-        topRight = (CurrPoint[0] + 1, CurrPoint[1] + 1)
-        bottomRight = (CurrPoint[0] + 1, CurrPoint[1] - 1)
-        left = ((CurrPoint[0] - 1, CurrPoint[1]))
-        topLeft  =((CurrPoint[0] - 1, CurrPoint[1] + 1))
-        bottomLeft = ((CurrPoint[0] - 1, CurrPoint[1] -1))
-        up = ((CurrPoint[0], CurrPoint[1] + 1))
-        down = ((CurrPoint[0], CurrPoint[1] -1))
-
-        CardinalDict = {}
-        CardinaPoints = [up, topRight, right, bottomRight, down, bottomLeft, left, topLeft]
-        for points in CardinaPoints: CardinalDict[points] = GetDistanceBetweenPoints(points)
-        Bestpoint = max(CardinalDict, key = lambda k: CardinalDict[k])
-
-        if ColorCheck(image, Bestpoint, Color):
-            slope = GetSlope(edgePoint, Bestpoint)
-            Yintercept = calucalateYIntercept(CurrPoint, slope)
-            if LineCheck(Bestpoint, slope, Yintercept):
-                if Bestpoint is not OldPoints: 
-                    OldPoints.append(CurrPoint)
-                    CurrPoint = Bestpoint
-            else: break
-        else:break
-    return CurrPoint
-                  
-
-def ColorCheck(image, point, Color):
-    ReturnBool = False
-    if (int(image[point][0]), int(image[point][1]), int(image[point][2])) == Color:
-        ReturnBool = True
-    return ReturnBool
-        
-
-def LineCheck(pointWeAreChecking, slope, Yintercept):
-    ReturnBool = False
-    calculatedYvalue = round(slope * pointWeAreChecking[0] + Yintercept)
-    if calculatedYvalue == pointWeAreChecking[1]: ReturnBool =True
-    return ReturnBool
-
-
-def calucalateYIntercept(Point, slope):
-    return( Point[1] - (Point[0] * slope) )
-
-def GetSlope(point1:list, point2:list):
-    returnVal = 0
-    if point2[0] == point1[0]: returnVal = 0
-    else: returnVal = (point2[1] - point1[1]) / (point2[0] - point1[0])
-    return returnVal
-
-    
-def GetDistanceBetweenPoints(point1:list, point2:list): #supporting function that just does the distance formula
-    return math.sqrt(((point2[0]-point1[0])**2) + ((point2[1]-point1[1])**2))
-
-
-def GetDistanceBetweenPoints3D(point1:list, point2:list): #supporting function that just does the distance formula for 3d 
-    return math.sqrt(((point2[0]-point1[0])**2) + ((point2[1]-point1[1])**2) + ((point2[2]-point1[2])**2))
 
 def GetMidPoint(MeshStructure):
     estimateMidpoints = [] #This will hold the potential midpoints before they are averaged out
@@ -565,3 +434,6 @@ def TransposeMesh(Midpoint, Mesh):
             tempPoint[2] = (Midpoint[2] + (Midpoint[2] - point[2]))
             transposedPoints.append(tempPoint)
     return transposedPoints
+
+def GetDistanceBetweenPoints3D(point1:list, point2:list): #supporting function that just does the distance formula for 3d 
+    return math.sqrt(((point2[0]-point1[0])**2) + ((point2[1]-point1[1])**2) + ((point2[2]-point1[2])**2))
