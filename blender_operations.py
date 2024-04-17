@@ -322,10 +322,8 @@ def DrawMeshToScreen(MeshStructure, self, CollectionName = "Sketch_to_Mesh_Colle
 
 def DrawMesh(ColorWeAreLookingFor, PolyCount, self, PlaneArray:list[PlaneItem], isComplex):
     for plane in PlaneArray:
-        ImageDictionary, Imagedata, Image = GetlistOfPixels(PolyCount, ColorWeAreLookingFor, plane)
-        #FullVertList = SpaceOutPixels(ImageDictionary, PolyCount)
-
         if isComplex == True: #only happens when complex is called
+            ImageDictionary, Imagedata, Image = GetlistOfPixels(PolyCount, ColorWeAreLookingFor, plane)
             VertList = NormaliseVertList(ImageDictionary)
 
             if VertList == False:  return False #ends the function before any extra work is done
