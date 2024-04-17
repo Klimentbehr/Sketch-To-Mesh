@@ -336,7 +336,7 @@ def DrawMesh(ColorWeAreLookingFor, PolyCount, self, PlaneArray:list[PlaneItem], 
             MeshStructureLibrary = DefineDictioniesForColorsLines(PixelLineDictionary)
             DrawMeshToScreen(MeshStructureLibrary[0], self, "Sketch_To_Mesh_Collection")
         else: 
-            MeshStructure = GenerateShapeEdges(ImageDictionary, PolyCount, plane, ColorWeAreLookingFor) #only called when not complex is called
+            MeshStructure = GenerateShapeEdges(PolyCount, plane, ColorWeAreLookingFor) #only called when not complex is called
             DrawMeshToScreen(MeshStructure, self) #draws all the meshes to screen
            
 # TODO: return something that is not 0. case handling and error handling, as well as completed and noncompleted states.

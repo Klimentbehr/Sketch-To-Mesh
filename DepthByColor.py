@@ -1,7 +1,7 @@
 import cv2
 import math
 from .image_processing import PlaneItem, mark_corners, EditPicture, SaveImage
-from .DepthByColorHelper import AdjacentEdge, ImageDataClass, GetSlope, calucalateYIntercept, GetUniquePoints, CheckForInsideLines, CreateSolidLine, GetDistanceBetweenPoints, ColorCheck, GetFilledCircle
+from .DepthByColorHelper import AdjacentEdge, ImageDataClass, GetSlope, calucalateYIntercept, GetUniquePoints, CheckForInsideLines, CreateSolidLine, GetDistanceBetweenPoints, ColorCheck, GetFilledCircle, GetAverageOfAllCoordinateValuesInList, GetAverageDstBetweenPoints, getCircle, GetClosetPointsToValue, GetUniquePoints
 from threading import Thread, Lock
 from dataclasses import dataclass
 
@@ -37,26 +37,23 @@ class EdgeData:
 #The sceond being the edges openCv has found. (These edges will be used for the first state of the program)
 
 #Parameters
-#FullVertList: Thisis the vertices passed in from blender operations. This should hold the vertices that are a polycount away from each other
 #radius: This is the polycount passed in from blender operations.
 #Plane: This holds the filepaths and image infomation for the image the user wants to recreate
 #ColorToLLokFor: This is the color openCv uses for outlining
 
 #Returns
 #outputlist: This is the MeshStructure of the simplified mesh
-def GenerateShapeEdges(FullVertList:dict, radius:int, plane:PlaneItem, ColorToLookFor):
+def GenerateShapeEdges(radius:int, plane:PlaneItem, ColorToLookFor):
     imageDataClass = ImageDataClass(radius, plane, ColorToLookFor)
-
-    PointArray, EnlargedImageRowMultiplier, EnlargedImageColumnMultiplier, imageShape = GetPointsFromImage(imageDataClass.image, plane, imageDataClass.ImageShape[0], imageDataClass.ImageShape[1])
+    FinishedList =[]
+    SizedEdgePoints, MulipliersValues, imageShape = GetPointsFromImage(imageDataClass.image, plane, imageDataClass.ImageShape[0], imageDataClass.ImageShape[1], radius)
     imageDataClass.__setattr__('ImageShape', imageShape)
-    ImagePointArray:list = GetPointsfromPoints(FullVertList, imageDataClass.ImageShape[0], imageDataClass.ImageShape[1])
-    SizedEdgeList = GetUniquePoints(PointArray + ImagePointArray)#we remove repeated values
-    FinishedList = []
-    for points in SizedEdgeList: FinishedList.append((round(points[0] / EnlargedImageRowMultiplier), round(points[1] / EnlargedImageColumnMultiplier)))
-
     imageDataClass.__setattr__('image', cv2.resize(imageDataClass.image, (imageDataClass.ImageShape[1], imageDataClass.ImageShape[0])))
-    for points in FinishedList:EditPicture((0,0,0), points, imageDataClass.image)
-    SaveImage(imageDataClass.image, plane.ImagePlaneFilePath, "View0")
+    for points in SizedEdgePoints: FinishedList.append((round(points[0] / MulipliersValues[0]), round(points[1] / MulipliersValues[1])))
+
+    for points in FinishedList:
+        EditPicture((0,0,0), points, imageDataClass.image)
+        SaveImage(imageDataClass.image, plane.ImagePlaneFilePath, "View0")
  
     EdgeDataList = CreateEdgeData(FinishedList, imageDataClass)
     EdgeDataList = CalculateLocationsOfAvaliblePixelsAroundPoint(EdgeDataList, imageDataClass)
@@ -75,144 +72,51 @@ def GenerateShapeEdges(FullVertList:dict, radius:int, plane:PlaneItem, ColorToLo
 
 #Returns
 #This function returns the list of edgePoint coordinates, The Sizers for the row and column of the image, and the size of the oringinal image
-def GetPointsFromImage(image, plane:PlaneItem, ImageRow, ImageColumn):
-    EdgePointArray, imageShape = mark_corners(plane.PlaneFilepath)
+def GetPointsFromImage(image, plane:PlaneItem, ImageRow, ImageColumn, radius):
+    CvEdgePointArray, imageShape = mark_corners(plane.PlaneFilepath)
     EdgeImageRow = imageShape[0] -1
     EdgeImageColumn = imageShape[1] -1
     EnlargedImageRowMultiplier = ImageRow / EdgeImageRow
     EnlargedImageColumnMultiplier = ImageColumn / EdgeImageColumn
-    CombinedVertList = {}
+    EdgePointArray = []
+    EdgepointsForCircle = []
+    EdgePoints=[]
 
-    for point in EdgePointArray:
+    for point in CvEdgePointArray:
         EnlargedRow = round(point[0] * EnlargedImageRowMultiplier)
         EnlargedColummn = round(point[1] * EnlargedImageColumnMultiplier)
-        CombinedVertList[EnlargedRow] = EnlargedColummn
-
-    MaxX = max(CombinedVertList)
-    GreatestX = (MaxX, CombinedVertList[MaxX])
-
-    MinX = min(CombinedVertList)
-    MiniumX = (MinX, CombinedVertList[MinX])
-
-    MaxY = max(CombinedVertList, key = lambda k: CombinedVertList[k])
-    GreatestY = (MaxY, CombinedVertList[MaxY])
-
-    MinY = min(CombinedVertList, key = lambda k: CombinedVertList[k])
-    MiniumY = (MinY, CombinedVertList[MinY])
-
-    TopLeft = ((0, ImageColumn))
-    TopRight = ((ImageRow, 0))
-    BottomLeft = ((0, ImageColumn))
-    BottomRight = ((ImageRow, ImageColumn))
-
-    ShapeCorners = [TopLeft, TopRight, BottomLeft, BottomRight]
-    ShapeCorner = [(0,0), (0,0), (0,0) , (0,0)] # there are four spaces for the extra points 
-    ResetValue = (image.shape[1] * image.shape[0], (0,0))
-    SmallestVal = (ResetValue, (0,0))
-    iter = 0
-
-    OldCornerval = ShapeCorners[0] #sets the old corner that we look at to update the iter and sets it to the current 
-    for Corners in ShapeCorners:  #looks at each corner of the shape
-        SmallestVal = ResetValue #resets the smallest value everytime we go to the next corner
-        if not(Corners == OldCornerval) :  iter = iter + 1; OldCornerval = Corners #everytime we get a new corner we update the iter
-
-        for points in CombinedVertList: #loops through the points in the list
-            #checks if the points we are looking for are equal to any of the preivous values
-            if (points, CombinedVertList[points]) == GreatestX or (points, CombinedVertList[points])  == MiniumX or (points, CombinedVertList[points])  == GreatestY or (points, CombinedVertList[points]) == MiniumY: continue
-
-            Dst = abs(GetDistanceBetweenPoints((points, CombinedVertList[points]), Corners))
-            if Dst < SmallestVal[0]: 
-                SmallestVal = (Dst, (points, CombinedVertList[points]))
-                ShapeCorner[iter] = SmallestVal[1]
-
-    iterator = 0 
-    iteratorArray = []
-    for corners in ShapeCorner:
-        if corners == (0,0): iteratorArray.append(iterator)
-        iterator = iterator + 1
-    for iters in iteratorArray: ShapeCorner[iters] = MiniumX
-
-    return [MiniumY, ShapeCorner[0], MiniumX, GreatestY] , EnlargedImageRowMultiplier, EnlargedImageColumnMultiplier, (EdgeImageRow+1, EdgeImageColumn+1)
-
-#GetPointsfromPoints
-#Description
-#This function is gets the part of the edgePoints from manually using the points from the fullVert list. 
-
-#Parameters
-#FullVertList: Thisis the vertices passed in from blender operations. This should hold the vertices that are a polycount away from each other
-#ImageRow: This is the width of the image
-#ImageColumn: This is the Lebngth of the image
-
-#Returns
-#This returns part of edgePOints need to create the image
-def GetPointsfromPoints(FullVertList:list, ImageRow, ImageColumn):
-    CombinedVertList = {}
-    for sides in FullVertList:
-        for point in FullVertList[sides]:
-            CombinedVertList[point[0]] = point[1]
-
-    MaxX = max(CombinedVertList)
-    MaxX = max(CombinedVertList)
-    GreatestX = (MaxX, CombinedVertList[MaxX])
-
-    MinXValue = min(CombinedVertList, key=CombinedVertList.get)
-    TestPointvalues1 = (MinXValue, CombinedVertList[MinXValue])
-
-    GreatestXsmallestY = (0, 0)
-    #sets the greatest value to the smallest value we can get
-    GreatestCurrentValue = (0, (0,0))
-    #sets the smallest value to the larger value we can get
-    SmallestCurrValue = (GetDistanceBetweenPoints((0,0), (ImageRow, ImageColumn)), (ImageRow, ImageColumn))
-
-    CurrSmallBottomvalue = SmallestCurrValue
-    GreatestPointvalues = (0, (0,0))
-    SmallestPointvalues = (10000, (0,0))
-
-    for Xvalue in CombinedVertList:
-        YAxis = CombinedVertList[Xvalue] #saves the y value of the list to a more readable varible
-        PointDst = GetDistanceBetweenPoints((0,0), (Xvalue, YAxis))
-        PointValue = Xvalue + YAxis 
-        PointDstBottom = GetDistanceBetweenPoints((ImageRow, ImageColumn), (Xvalue, YAxis)) 
-
-        if(PointValue < SmallestPointvalues[0]): SmallestPointvalues = (PointValue, (Xvalue, YAxis) )
-        if(PointValue > GreatestPointvalues[0]): GreatestPointvalues = (PointValue, (Xvalue, YAxis) )
-
-        if (PointDst > GreatestCurrentValue[0]): GreatestCurrentValue = (PointDst, (Xvalue, YAxis))
-        if (PointDst < SmallestCurrValue[0]): SmallestCurrValue = (PointDst, (Xvalue, YAxis))
+        EdgePointArray.append((EnlargedRow, EnlargedColummn))
         
-        if PointDstBottom < CurrSmallBottomvalue[0]: CurrSmallBottomvalue = (PointDstBottom, (Xvalue, YAxis))
+    AveragePoint = GetAverageOfAllCoordinateValuesInList(EdgePointArray)
+    AverageValueTODstCircle = GetAverageDstBetweenPoints(EdgePointArray, AveragePoint)
+    CirclePoints = getCircle(AveragePoint, image, AverageValueTODstCircle+round(EnlargedRow), True)
+    for CircleEdges in CirclePoints: #CirclePoints in a list of lists so we searchthrough each list to see if there are any edges
+        EdgepointsForCircle = EdgepointsForCircle + GetClosetPointsToValue(EdgePointArray, CircleEdges)
+    EdgePoints = OrderPoints(GetUniquePoints(EdgepointsForCircle))
+    EdgePoints.remove(EdgePoints[-1])
+    return EdgePoints, (EnlargedImageRowMultiplier, EnlargedImageColumnMultiplier), (imageShape[0], imageShape[1])
+ 
 
-        #we also what the hightest of the Xvalue with the Lowest of Y values and Vice versa
-        if (CalculateGreatestAxisWithsmallestAxis((Xvalue, YAxis), GreatestXsmallestY, "X")) : GreatestXsmallestY = (Xvalue, YAxis)
+def OrderPoints(circle_points):
+    ordered_list = []
+    CurrPoint = circle_points[0]
+    ordered_list.append(CurrPoint)
+    not_done = True
+    iter = 0
+    while not_done:
+        NextValue = (float('inf'), (0, 0))
+        for point in circle_points:
+            if CurrPoint == point or point in ordered_list: continue
+            else:
+                distance = abs(GetDistanceBetweenPoints(point, CurrPoint))
+                if distance < NextValue[0]: NextValue = (distance, point)
+        CurrPoint = NextValue[1]
+        ordered_list.append(CurrPoint)
+        iter = iter + 1
+        if iter == len(circle_points): not_done = False
+        
+    return ordered_list
 
-    #GreatestY -> GreatestX ->GreatestXGreatestY ->GreatestXsmallestY -> SmallestY -> SmallestXSmallestY ->SmallestXGreatestY -> smallestX
-    #we make the list in this order so they match up
-    return  [GreatestX , GreatestXsmallestY, TestPointvalues1]
-
-#CalculateGreatestAxisWithsmallestAxis
-#Description
-#This function is a helper for the GetPointsfromPoints function.
-#This finds a point from a list of X and Y values and returns that value
-
-#Parameters
-#FullVertList: Thisis the vertices passed in from blender operations. This should hold the vertices that are a polycount away from each other
-#ImageRow: This is the width of the image
-#ImageColumn: This is the Lebngth of the image
-
-#Returns
-#This returns part of coordinates of the edge points need to create the image
-def CalculateGreatestAxisWithsmallestAxis(Point1:list, Point2:list, GreaterVal:str):
-    returnBool = False
-    if GreaterVal == "X": GreaterVal = 0; SmallVal = 1
-    else: GreaterVal = 1; SmallVal = 0
-    
-    if Point1[GreaterVal] > Point2[GreaterVal]:
-        if Point1[SmallVal] < Point2[SmallVal]: returnBool = True
-        else:
-            dist1 =Point1[GreaterVal] - Point1[SmallVal]
-            dist2 = Point2[GreaterVal] - Point2[SmallVal]
-            if dist1 > dist2: returnBool = True
-    return returnBool
 
 #CreateEdgeData
 #Description
