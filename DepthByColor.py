@@ -8,8 +8,6 @@ from dataclasses import dataclass
 mutex = Lock()
 meshMidpoint = None
 
-mutex = Lock()
-
 @dataclass
 class EdgeData:
     Point = [] #this will hold the coordinate of the center point
@@ -20,7 +18,6 @@ class EdgeData:
     AllSurrondingPoints = []
     AverageColor:tuple
     ZValue:int
-    LinePoints:list
     LinePoints:list
 
     def __init__(self, Point ,NextPoint):
@@ -151,11 +148,13 @@ def CreateEdgeData(FinishedList:list, imageDataClass:ImageDataClass):
         #mutex.release()
         CurrEdgePoint.__setattr__('LinePoints', Linedata)
         #for threads in ThreadList:threads.join()    
-    AdjacentPoint:AdjacentEdge = CheckForInsideLines(imageDataClass, EdgeDataList)
+    global AdjacentPoint
+    AdjacentPoint = CheckForInsideLines(imageDataClass, EdgeDataList)
     for adjacentLines in AdjacentPoint.AdjacentLine: 
         for points in AdjacentPoint.AdjacentLine[adjacentLines]: #adds on the extras lines 
             EditPicture(Color, points, imageDataClass.image)
             SaveImage(imageDataClass.image, imageDataClass.plane.ImagePlaneFilePath, "View0")
+
     return EdgeDataList
 
 #ThreadingFunctionForCreatingEdgedata
@@ -275,14 +274,6 @@ def CycleThroughEdgePointsForColor(EdgeDataList, imageDataClass:ImageDataClass):
         CurrEdge.__setattr__('AverageColor', AverageColorList) #saves the average color for each of the instances
     
     EdgeDataList = CalculateZAxis(EdgeDataList)
-    meshMidpoint = GetMidPoint(EdgeDataList[0]) #retrieves the midpoint from current edge data
-    transposedMesh = TransposeMesh(meshMidpoint, EdgeDataList[0]) #transposes the matrix so that that points are generated that mirror the current 3d mesh
-    
-    tempList = list(EdgeDataList[0])
-    for points in transposedMesh: #this for loop adds the transposed points to the mesh
-        tempList.append(points)
-    tempList.append(meshMidpoint)
-    EdgeDataList[0] = tempList
     return EdgeDataList
 
 #GetAverageOfSurroundingValues
@@ -318,22 +309,60 @@ def CalculateZAxis(EdgeDataList:dict):
     YList = []
     FinalEdgeData = []
 
+    AdjacentEdgeZValueReference = []
+    ZValueIter = 0
     for points in EdgeDataList:
         edgepoint:EdgeData = EdgeDataList[points]
         edgepoint.__setattr__('ZValue', ((round(EdgeDataList[points].AverageColor[0]) + round(EdgeDataList[points].AverageColor[1]) + round(EdgeDataList[points].AverageColor[2])) / 3))
         ZValuesList.append(EdgeDataList[points].ZValue)
+        if AdjacentPoint.AdjacentLine.get(points): AdjacentEdgeZValueReference.append(ZValueIter)
         XList.append(points[0])
         YList.append(points[1])
+        ZValueIter = ZValueIter + 1
+
+    XList.append(AdjacentPoint.Coordinates[0])
+    YList.append(AdjacentPoint.Coordinates[1])
 
     NormalisedXData = NormaliseData(XList)
     NormalisedYData = NormaliseData(YList)
     NormalisedZData= NormaliseData(ZValuesList) #Normalises the Z data so the values match the values in the orginal function
 
+    AdjacentPoint.__setattr__('Coordinates', (NormalisedXData[-1], NormalisedYData[-1])) #grabs the normalise X and Y for the adjacent points
     iter = 0
     for ZData in NormalisedZData:
         FinalEdgeData.append((NormalisedXData[iter], NormalisedYData[iter], ZData))
-        iter = iter + 1
-    MeshStructure = GenerateEdges(FinalEdgeData, "BlenderPoints")
+        iter += 1
+
+    iter = 0
+    ZAverage = 0
+    AdjacentEdgeList = []
+    for points in FinalEdgeData:
+        if iter in AdjacentEdgeZValueReference: 
+            ZAverage += ZData
+            AdjacentEdgeList.append((len(NormalisedZData)*2, iter))
+        iter += 1
+        ZAverage /= AdjacentEdgeZValueReference.__len__()
+
+    TemptFinalEdgeData = FinalEdgeData.copy()
+    TemptFinalEdgeData.append((AdjacentPoint.Coordinates[0], AdjacentPoint.Coordinates[1], ZAverage))
+    meshMidpoint = GetMidPoint(TemptFinalEdgeData) #retrieves the midpoint from current edge data
+    transposedMesh = TransposeMesh(meshMidpoint, TemptFinalEdgeData) #transposes the matrix so that that points are generated that mirror the current 3d mesh
+
+    iter = 0
+    AdjacentEdgeListTransposed = []
+    for points in transposedMesh:
+        if iter in AdjacentEdgeZValueReference: 
+            AdjacentEdgeListTransposed.append((len(NormalisedZData)*2+1, iter+7))
+        iter += 1
+
+    TransposedAdjacentPoint = transposedMesh[-1]
+    transposedMesh.remove(TransposedAdjacentPoint)
+
+    MeshStructure = GenerateEdges(FinalEdgeData, "BlenderPoints", transposedMesh)
+    MeshStructure[0].append((AdjacentPoint.Coordinates[0], AdjacentPoint.Coordinates[1], ZAverage)) #adds the adjacentPoint not transposed
+    MeshStructure[0].append((TransposedAdjacentPoint)) #adds the transposed adjacent point
+    MeshStructure[0].append(meshMidpoint) #adds the midpoint
+    MeshStructure[1] = MeshStructure[1] + AdjacentEdgeList + AdjacentEdgeListTransposed #ands the lines connecting the adjacent points
     return MeshStructure
 
 #NormaliseData
@@ -350,8 +379,7 @@ def NormaliseData(List:list):
     if not List: return False
     else: 
         for element in List:  
-            if  min(List) == max(List):
-                UpdatedList.append(0)
+            if  min(List) == max(List): UpdatedList.append(0)
             else:
                 norm = (element - min(List)) / (max(List) - min(List))
                 UpdatedList.append(norm)
@@ -367,11 +395,25 @@ def NormaliseData(List:list):
 
 #Returns
 #UpdatedList: Contained the updated list with the normalised values
-def GenerateEdges(VertList:list, request:str):
+def GenerateEdges(VertList:list, request:str, VertList2:list = []):
     MeshStructure = {}
     edgeList = []
     iterator = 1
-    if request == "BlenderPoints":
+
+    if len(VertList) > 1:
+        for verts in range(len(VertList)): #this will get the vertical edges for the mesh.
+            if iterator >= len(VertList): edgeList.append((iterator-1, iterator - len(VertList)))
+            else:
+                edgeList.append((verts, iterator))
+                iterator = iterator + 1
+        iterator += 1
+        for verts in range(len(VertList2)): #this will get the vertical edges for the mesh.
+            if iterator >= len(VertList2)+ len(VertList): edgeList.append((iterator-1, iterator- len(VertList2)))
+            else:
+                edgeList.append((verts+len(VertList), iterator))
+                iterator = iterator + 1 
+
+    elif request == "BlenderPoints":
         for verts in range(VertList.__len__()): #this will get the vertical edges for the mesh.
             if iterator >= VertList.__len__(): edgeList.append((iterator-1, 0))
             else:
@@ -390,7 +432,7 @@ def GenerateEdges(VertList:list, request:str):
                 edgeList.append(verts)
                 iterator = iterator + 1
 
-    MeshStructure[0] = VertList
+    MeshStructure[0] = VertList + VertList2
     MeshStructure[1] = edgeList
     MeshStructure[2] = []
     return MeshStructure
@@ -429,9 +471,9 @@ def TransposeMesh(Midpoint, Mesh):
     transposedPoints = []
     for point in Mesh:
             tempPoint = list(point)
-            tempPoint[0] = (Midpoint[0] + (Midpoint[0] - point[0]))
-            tempPoint[1] = (Midpoint[1] + (Midpoint[1] - point[1]))
-            tempPoint[2] = (Midpoint[2] + (Midpoint[2] - point[2]))
+            tempPoint[0] = (Midpoint[0] + (Midpoint[0] - point[0])) #X
+            tempPoint[1] = (Midpoint[1] + (Midpoint[1] - point[1])) #Y
+            tempPoint[2] = (Midpoint[2] + (Midpoint[2] - point[2])) #Z
             transposedPoints.append(tempPoint)
     return transposedPoints
 

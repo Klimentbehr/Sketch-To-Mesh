@@ -164,9 +164,10 @@ def CheckLineDst(Centerpoint, EdgeList, imagedataClass:ImageDataClass, Reverse=F
         Circlelist = getCircle(Centerpoint, imagedataClass.image, imagedataClass.radius) 
         NextPointsToCheck = CondensePointsForCircle(Circlelist, imagedataClass)
 
-        for points in Circlelist: EditPicture((173, 2, 100), points, imagedataClass.image)
-        for points in NextPointsToCheck: EditPicture((173, 2, 100), points, imagedataClass.image)
-        SaveImage(imagedataClass.image, imagedataClass.plane.ImagePlaneFilePath, "View3")
+        #for colored circles
+        #for points in Circlelist: EditPicture((173, 2, 100), points, imagedataClass.image)
+        #for points in NextPointsToCheck: EditPicture((173, 2, 100), points, imagedataClass.image)
+        #SaveImage(imagedataClass.image, imagedataClass.plane.ImagePlaneFilePath, "View3")
         
         if Reverse == True:
             DeterminigValue = (100000, (0,0))
