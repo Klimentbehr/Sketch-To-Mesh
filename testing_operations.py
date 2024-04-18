@@ -1,6 +1,6 @@
 import bpy
 from .db_operations import test_connection, save_file_to_db, get_files_by_user_id, delete_files_by_object_id # the . is on purpose. do not remove
-from .image_processing import test_feature_detection, find_and_color_vertices, camera_corner, camera_test # the . is on purpose. do not remove
+from .image_processing import test_feature_detection, find_and_color_vertices, camera_corner, camera_test, testing_tracker, test_shit, cringe_ai_model# the . is on purpose. do not remove
 from .blender_operations import DrawMeshToScreen
 from .blender_operations import saveObj
 
@@ -83,7 +83,10 @@ class StMTestCameraDetection(bpy.types.Operator):
     def execute(self, context):
 
         #camera_corner()
-        camera_test()
+        #camera_test()
+        #testing_tracker()
+        #test_shit()
+        cringe_ai_model()
 
         return {'FINISHED'}
 
@@ -141,6 +144,7 @@ class DoImg(bpy.types.Operator):
     
 
 class ExportToDatabase(bpy.types.Operator):
+    
     bl_idname = "wm.database_export"
     bl_label = "Test Database Export"
 
