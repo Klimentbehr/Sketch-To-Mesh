@@ -164,9 +164,10 @@ def CheckLineDst(Centerpoint, EdgeList, imagedataClass:ImageDataClass, Reverse=F
         Circlelist = getCircle(Centerpoint, imagedataClass.image, imagedataClass.radius) 
         NextPointsToCheck = CondensePointsForCircle(Circlelist, imagedataClass)
 
-        for points in Circlelist: EditPicture((173, 2, 100), points, imagedataClass.image)
-        for points in NextPointsToCheck: EditPicture((173, 2, 100), points, imagedataClass.image)
-        SaveImage(imagedataClass.image, imagedataClass.plane.ImagePlaneFilePath, "View3")
+        #for colored circles
+        #for points in Circlelist: EditPicture((173, 2, 100), points, imagedataClass.image)
+        #for points in NextPointsToCheck: EditPicture((173, 2, 100), points, imagedataClass.image)
+        #SaveImage(imagedataClass.image, imagedataClass.plane.ImagePlaneFilePath, "View3")
         
         if Reverse == True:
             DeterminigValue = (100000, (0,0))
@@ -235,7 +236,7 @@ def GetPointsWithinRadius(pointsList:list, Radius):
 
 #Return:
 #CirclePoints: these are the points making the circle
-def getCircle(center:list, image, Radius = 1):
+def getCircle(center:list, image, Radius = 1, isQuaded = False):
     #Orders the points in the circle
     imageShape = image.shape
     CirclePointsRT = []
@@ -273,16 +274,29 @@ def getCircle(center:list, image, Radius = 1):
     LeftCirle:list = ReverseLB + CirclePointsLT
     TopLeftToTopRight =[]
     BottomLeftToBottomRight = []
-
+    
+ 
     for Ypoints in range(RightCirle[0][1]-LeftCirle[0][1] ):
         NewPoint = (LeftCirle[0][0], LeftCirle[0][1] + Ypoints)
         TopLeftToTopRight.append(NewPoint)
-
     for Ypoints in range(RightCirle[-1][1] -LeftCirle[-1][1]):
         NewPoint = (LeftCirle[-1][0], (LeftCirle[-1][1] + Ypoints))
         BottomLeftToBottomRight.append(NewPoint)
-    
-    CirclePoints:list = TopLeftToTopRight + RightCirle + BottomLeftToBottomRight[::-1] + LeftCirle[::-1]
+
+    if isQuaded: 
+        FirstHalfofTopRightLine= TopLeftToTopRight[len(TopLeftToTopRight)//2:]
+        SecondHalfofTopRightLine= TopLeftToTopRight[:len(TopLeftToTopRight)//2]
+        FirstHalfofBottomRightLine= BottomLeftToBottomRight[len(BottomLeftToBottomRight)//2:]
+        SecondHalfofBottomRightLine= BottomLeftToBottomRight[:len(BottomLeftToBottomRight)//2]
+
+        ReversedRT = SecondHalfofTopRightLine + ReversedRT
+        CirclePointsRB = CirclePointsRB + FirstHalfofBottomRightLine[::-1]
+        ReverseLB = ReverseLB + SecondHalfofBottomRightLine[::-1]
+        CirclePointsLT = CirclePointsLT[::-1] + FirstHalfofTopRightLine
+       
+
+        CirclePoints = ReversedRT, CirclePointsRB, ReverseLB, CirclePointsLT
+    else: CirclePoints:list = TopLeftToTopRight + RightCirle + BottomLeftToBottomRight[::-1] + LeftCirle[::-1]
     return CirclePoints
 
 #GetFilledCircle
@@ -515,3 +529,22 @@ def SolidifyEdgePointlines(Linedata:list):
     
     for newpoints in NewLinePoints: Linedata.append(newpoints) #adds the new points to the dictionary
     return Linedata
+
+def GetAverageDstBetweenPoints(PointList:list, centerPoint:list):
+    PointDstValue = 0
+    for points in PointList: PointDstValue = PointDstValue + GetDistanceBetweenPoints(points, centerPoint)
+    PointDstValue = PointDstValue / len(PointList)
+    return round(PointDstValue)
+
+def GetClosetPointsToValue(PointList:list, ValueList:list):
+    ActivePoints = []
+    for values in ValueList:
+        SmallestValue = (1111111111, [0,0])
+        for points in PointList:
+            DstBetweenPoint = GetDistanceBetweenPoints(points, values)
+            if DstBetweenPoint< SmallestValue[0]: 
+                SmallestValue = (DstBetweenPoint, points)
+                ActivePoints.append(points)
+    ActivePoints = GetUniquePoints(ActivePoints)
+    return ActivePoints
+

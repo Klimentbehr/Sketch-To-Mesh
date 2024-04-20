@@ -322,10 +322,8 @@ def DrawMeshToScreen(MeshStructure, self, CollectionName = "Sketch_to_Mesh_Colle
 
 def DrawMesh(ColorWeAreLookingFor, PolyCount, self, PlaneArray:list[PlaneItem], isComplex):
     for plane in PlaneArray:
-        ImageDictionary, Imagedata, Image = GetlistOfPixels(PolyCount, ColorWeAreLookingFor, plane)
-        #FullVertList = SpaceOutPixels(ImageDictionary, PolyCount)
-
         if isComplex == True: #only happens when complex is called
+            ImageDictionary, Imagedata, Image = GetlistOfPixels(PolyCount, ColorWeAreLookingFor, plane)
             VertList = NormaliseVertList(ImageDictionary)
 
             if VertList == False:  return False #ends the function before any extra work is done
@@ -336,7 +334,7 @@ def DrawMesh(ColorWeAreLookingFor, PolyCount, self, PlaneArray:list[PlaneItem], 
             MeshStructureLibrary = DefineDictioniesForColorsLines(PixelLineDictionary)
             DrawMeshToScreen(MeshStructureLibrary[0], self, "Sketch_To_Mesh_Collection")
         else: 
-            MeshStructure = GenerateShapeEdges(ImageDictionary, PolyCount, plane, ColorWeAreLookingFor) #only called when not complex is called
+            MeshStructure = GenerateShapeEdges(PolyCount, plane, ColorWeAreLookingFor) #only called when not complex is called
             DrawMeshToScreen(MeshStructure, self) #draws all the meshes to screen
            
 # TODO: return something that is not 0. case handling and error handling, as well as completed and noncompleted states.
