@@ -73,6 +73,8 @@ class VIEW3D_PT_Sketch_To_Mesh_Testing(bpy.types.Panel):
         row.operator("wm.toast_notification", text="Toast Test")
         row = layout.row()
         row.operator("wm.camera_edge", text="Camera Test")
+        row = layout.row()
+        row.operator("wm.cameraai_edge", text="AI Depth Test")
 
 
 

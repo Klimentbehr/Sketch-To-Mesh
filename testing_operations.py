@@ -83,6 +83,21 @@ class StMTestCameraDetection(bpy.types.Operator):
     def execute(self, context):
 
         #camera_corner()
+        camera_test()
+        #testing_tracker()
+        #test_shit()
+        #cringe_ai_model()
+
+        return {'FINISHED'}
+    
+class StMTestCameraDetectionAI(bpy.types.Operator):
+    bl_idname = "wm.cameraai_edge"
+    bl_label = "Test AI Depth Detection"
+    bl_description = "Test Camera AI Depth functionality"
+
+    def execute(self, context):
+
+        #camera_corner()
         #camera_test()
         #testing_tracker()
         #test_shit()
