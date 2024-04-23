@@ -85,6 +85,8 @@ def GetPointsFromImage(image, plane:PlaneItem, ImageRow, ImageColumn, radius):
         EdgePointArray.append((EnlargedRow, EnlargedColummn))
         
     AveragePoint = GetAverageOfAllCoordinateValuesInList(EdgePointArray)
+    AveragePoint = ((round(AveragePoint[0]), round(AveragePoint[1])))
+
     AverageValueTODstCircle = GetAverageDstBetweenPoints(EdgePointArray, AveragePoint)
     CirclePoints = getCircle(AveragePoint, image, AverageValueTODstCircle+round(EnlargedRow), True)
     for CircleEdges in CirclePoints: #CirclePoints in a list of lists so we searchthrough each list to see if there are any edges
@@ -337,9 +339,7 @@ def CalculateZAxis(EdgeDataList:dict):
     ZAverage = 0
     AdjacentEdgeList = []
     for points in FinalEdgeData:
-        if iter in AdjacentEdgeZValueReference: 
-            ZAverage += ZData
-            AdjacentEdgeList.append((len(NormalisedZData)*2, iter))
+        if iter in AdjacentEdgeZValueReference: ZAverage += ZData
         iter += 1
         ZAverage /= AdjacentEdgeZValueReference.__len__()
 
@@ -350,15 +350,28 @@ def CalculateZAxis(EdgeDataList:dict):
 
     iter = 0
     AdjacentEdgeListTransposed = []
-    for points in transposedMesh:
-        if iter in AdjacentEdgeZValueReference: 
-            AdjacentEdgeListTransposed.append((len(NormalisedZData)*2+1, iter+7))
+    MergedTransposedList = []
+    for tpoints in transposedMesh:
+        CurrSmallestDstBetweenPoints = (1000000000, (0,0), (0,0))
+        for points in FinalEdgeData:
+            DstBetweenPoints = GetDistanceBetweenPoints((tpoints[0], tpoints[1]), (points[0], points[1]))
+            if DstBetweenPoints < CurrSmallestDstBetweenPoints[0]: CurrSmallestDstBetweenPoints = (DstBetweenPoints, tpoints, points)
+        
+        MergedTransposedList.append(GetAverageOfAllCoordinateValuesInList([tpoints, points], True))
         iter += 1
 
+    MergedTransposedList.remove(MergedTransposedList[-1])
     TransposedAdjacentPoint = transposedMesh[-1]
     transposedMesh.remove(TransposedAdjacentPoint)
+    iter = 0
+    for points in MergedTransposedList:
+        if iter in AdjacentEdgeZValueReference:
+            AdjacentEdgeList.append((len(NormalisedZData), iter))
+        else:
+            AdjacentEdgeListTransposed.append((len(NormalisedZData)+1, iter))
+        iter += 1
 
-    MeshStructure = GenerateEdges(FinalEdgeData, "BlenderPoints", transposedMesh)
+    MeshStructure = GenerateEdges(MergedTransposedList, "BlenderPoints")
     MeshStructure[0].append((AdjacentPoint.Coordinates[0], AdjacentPoint.Coordinates[1], ZAverage)) #adds the adjacentPoint not transposed
     MeshStructure[0].append((TransposedAdjacentPoint)) #adds the transposed adjacent point
     MeshStructure[0].append(meshMidpoint) #adds the midpoint
