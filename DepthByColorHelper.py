@@ -53,6 +53,7 @@ def CheckForInsideLines(imagedataClass:ImageDataClass, EdgeList:dict):
 
     CondensedAdjacentPoints = GetPointsWithinRadius(AdjacentPointList, imagedataClass.radius) #this will combine all of the point in the Adjcent list that are close
     AdjacentPoint = GetAverageOfAllCoordinateValuesInList(CondensedAdjacentPoints) #this will combine all of the points in the list
+    AdjacentPoint = ((round(AdjacentPoint[0]), round(AdjacentPoint[1])))
     ConnectedEdgePoints = GetLinesAroundAdjancentPoint(AdjacentPoint, lastEdgePoint, imagedataClass, EdgeList) # this will get all of the EdgePoints connected to the EdgeList
 
     return GetAdjcentPointConnections(ConnectedEdgePoints, EdgeList, AdjacentPoint) # this will return the AdjacentEdge Dataclass with all of the EdgePoints connected to the AdjcentPoint
@@ -187,6 +188,7 @@ def CheckLineDst(Centerpoint, EdgeList, imagedataClass:ImageDataClass, Reverse=F
         
         if NextPointsToCheck.__len__() >= 3:
             Adjacentpoint = GetAverageOfAllCoordinateValuesInList(NextPointsToCheck)#if this is not an edgePoint and has less that three lines coming from it we want to find the next point over
+            Adjacentpoint = ((round(Adjacentpoint[0]), round(Adjacentpoint[1])))
             break 
         else: Centerpoint = DeterminigValue[1]# we move on to the next point
     return Adjacentpoint
@@ -222,7 +224,9 @@ def GetPointsWithinRadius(pointsList:list, Radius):
         PointAveragingList[ReturnPoints] = AvergingPointList
 
     FinalPointsList = []
-    for AvergingPointList in PointAveragingList: FinalPointsList.append(GetAverageOfAllCoordinateValuesInList(PointAveragingList[AvergingPointList]))
+    for AvergingPointList in PointAveragingList: 
+        finalPoint = GetAverageOfAllCoordinateValuesInList(PointAveragingList[AvergingPointList])
+        FinalPointsList.append((round(finalPoint[0]), round(finalPoint[1])))
 
     return FinalPointsList
 
@@ -359,16 +363,31 @@ def GetFilledCircle(center:list, imagedata:ImageDataClass):
 
 #Returns
 #The average Point found between the points passed in
-def GetAverageOfAllCoordinateValuesInList(CoordinateList:list):
+def GetAverageOfAllCoordinateValuesInList(CoordinateList:list, ThreeDimensional = False):
     Xpoints= 0
     Ypoints = 0
-    for points in CoordinateList:
-        Xpoints = Xpoints+ points[0]
-        Ypoints = Ypoints+ points[1]
-    Xpoints= round(Xpoints / CoordinateList.__len__())
-    Ypoints= round(Ypoints / CoordinateList.__len__())
+    Zpoints = 0
+    OutputPoint = []
+    if ThreeDimensional:
+        for points in CoordinateList:
+            Xpoints = Xpoints+ points[0]
+            Ypoints = Ypoints+ points[1]
+            Zpoints = Zpoints+ points[2]
 
-    return (Xpoints, Ypoints)
+        Xpoints= Xpoints / CoordinateList.__len__()
+        Ypoints= Ypoints / CoordinateList.__len__()
+        Zpoints= Zpoints / CoordinateList.__len__()
+        OutputPoint += [Xpoints, Ypoints, Zpoints]
+
+    else:
+        for points in CoordinateList:
+            Xpoints = Xpoints+ points[0]
+            Ypoints = Ypoints+ points[1]
+        Xpoints= Xpoints / CoordinateList.__len__()
+        Ypoints= Ypoints / CoordinateList.__len__()
+        OutputPoint += [Xpoints, Ypoints]
+
+    return OutputPoint
 
 #GetUniquePoints
 #Description
@@ -547,4 +566,5 @@ def GetClosetPointsToValue(PointList:list, ValueList:list):
                 ActivePoints.append(points)
     ActivePoints = GetUniquePoints(ActivePoints)
     return ActivePoints
+
 
