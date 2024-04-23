@@ -146,9 +146,9 @@ def mark_corners(image_path, max_corners=100):
         for corner in corners:
             x, y = corner.ravel()
             cornerArray.append((y, x))
-            #EditPicture((255, 0, 0), (y,x), image)
+            EditPicture((255, 0, 0), (y,x), image)
             cv2.circle(image, (x, y), 3, (255, 0, 0), -1)
-    #SaveImage(image, image_path, "View1")
+    SaveImage(image, image_path, "View1")
     return cornerArray, image.shape
 
 #     # did i really just use math here
