@@ -54,6 +54,14 @@ def GenerateShapeEdges(radius:int, plane:PlaneItem, ColorToLookFor):
     for points in FinishedList:
         EditPicture((0,0,0), points, imageDataClass.image)
         SaveImage(imageDataClass.image, plane.ImagePlaneFilePath, "View0")
+
+    # FinishedDict = {key: 0 for key in FinishedList}
+
+    # AdjacentPoint:AdjacentEdge = CheckForInsideLines(imageDataClass, FinishedDict)
+    # for adjacentLines in AdjacentPoint.AdjacentLine: 
+    #     for points in AdjacentPoint.AdjacentLine[adjacentLines]: #adds on the extras lines 
+    #         EditPicture(imageDataClass.Color, points, imageDataClass.image)
+    #         SaveImage(imageDataClass.image, imageDataClass.plane.ImagePlaneFilePath, "View0")
  
     EdgeDataList = CreateEdgeData(FinishedList, imageDataClass)
     EdgeDataList = CalculateLocationsOfAvaliblePixelsAroundPoint(EdgeDataList, imageDataClass)
@@ -398,8 +406,8 @@ def GenerateEdges(VertList:list, request:str):
 def GetMidPoint(MeshStructure):
     estimateMidpoints = [] #This will hold the potential midpoints before they are averaged out
     furthestDistance = 0 #This will hold the furthest distance from one point for comparison
-    tempPoint = [1, 2, 3] #This will hold a temporary point for whatever point we need
     for point1 in MeshStructure:
+        tempPoint = list(point1) #This will hold a temporary point for whatever point we need
         for point2 in MeshStructure:
             if (point1 ==  point2): continue #if you are comparing the same point just continue on and ignore 
             else: 
