@@ -345,45 +345,41 @@ def CalculateZAxis(EdgeDataList:dict):
 
     iter = 0
     ZAverage = 0
-    AdjacentEdgeList = []
     for points in FinalEdgeData:
         if iter in AdjacentEdgeZValueReference: ZAverage += ZData
         iter += 1
         ZAverage /= AdjacentEdgeZValueReference.__len__()
 
     TemptFinalEdgeData = FinalEdgeData.copy()
-    TemptFinalEdgeData.append((AdjacentPoint.Coordinates[0], AdjacentPoint.Coordinates[1], ZAverage))
-    meshMidpoint = GetMidPoint(TemptFinalEdgeData) #retrieves the midpoint from current edge data
+    BaseAdjacentPoint = (AdjacentPoint.Coordinates[0], AdjacentPoint.Coordinates[1], ZAverage) #holds the adjacent point
+    TemptFinalEdgeData.append(BaseAdjacentPoint)
+    meshMidpoint = GetMidPoint(FinalEdgeData) #retrieves the midpoint from current edge data
     transposedMesh = TransposeMesh(meshMidpoint, TemptFinalEdgeData) #transposes the matrix so that that points are generated that mirror the current 3d mesh
-
+    TransposedAdjacentPoint = transposedMesh[-1] #holds the transposed adjacent 
+    transposedMesh.remove(TransposedAdjacentPoint) 
+    
     iter = 0
-    AdjacentEdgeListTransposed = []
     MergedTransposedList = []
     for tpoints in transposedMesh:
         CurrSmallestDstBetweenPoints = (1000000000, (0,0), (0,0))
         for points in FinalEdgeData:
             DstBetweenPoints = GetDistanceBetweenPoints((tpoints[0], tpoints[1]), (points[0], points[1]))
             if DstBetweenPoints < CurrSmallestDstBetweenPoints[0]: CurrSmallestDstBetweenPoints = (DstBetweenPoints, tpoints, points)
-        
         MergedTransposedList.append(GetAverageOfAllCoordinateValuesInList([tpoints, points], True))
         iter += 1
-
-    MergedTransposedList.remove(MergedTransposedList[-1])
-    TransposedAdjacentPoint = transposedMesh[-1]
-    transposedMesh.remove(TransposedAdjacentPoint)
+    
     iter = 0
+    AdjacentEdgeList = []
     for points in MergedTransposedList:
-        if iter in AdjacentEdgeZValueReference:
-            AdjacentEdgeList.append((len(NormalisedZData), iter))
-        else:
-            AdjacentEdgeListTransposed.append((len(NormalisedZData)+1, iter))
+        if iter in AdjacentEdgeZValueReference: AdjacentEdgeList.append((len(NormalisedZData), iter))
+        else: AdjacentEdgeList.append((len(NormalisedZData)+1, iter))
         iter += 1
 
     MeshStructure = GenerateEdges(MergedTransposedList, "BlenderPoints")
     MeshStructure[0].append((AdjacentPoint.Coordinates[0], AdjacentPoint.Coordinates[1], ZAverage)) #adds the adjacentPoint not transposed
     MeshStructure[0].append((TransposedAdjacentPoint)) #adds the transposed adjacent point
     MeshStructure[0].append(meshMidpoint) #adds the midpoint
-    MeshStructure[1] = MeshStructure[1] + AdjacentEdgeList + AdjacentEdgeListTransposed #ands the lines connecting the adjacent points
+    MeshStructure[1] = MeshStructure[1] + AdjacentEdgeList #ands the lines connecting the adjacent points
     return MeshStructure
 
 #NormaliseData
