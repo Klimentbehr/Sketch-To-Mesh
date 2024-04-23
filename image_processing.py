@@ -369,4 +369,15 @@ def SaveImage(image, filepath:str, filename:str):
     os.chdir("ImageFolder") #changes the directory to the folder where we are going to save the file
     cv2.imwrite(filename + Extension, image ) #saves the image
     os.chdir("..\\") #goes back one directory   
+def EditPicture(Color:list, Point:list, image):
+    image[Point][0] = Color[0]
+    image[Point][1] = Color[1]
+    image[Point][2] = Color[2]
+
+def SaveImage(image, filepath:str, filename:str):
+    Extension =  filepath[filepath.rfind("."): ] 
+    os.chdir("ImageFolder") #changes the directory to the folder where we are going to save the file
+    cv2.imwrite(filename + Extension, image ) #saves the image
+    os.chdir("..\\") #goes back one directory
+
 

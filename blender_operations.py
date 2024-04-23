@@ -3,7 +3,7 @@ import os
 import cv2
 import io
 import tempfile
-from .image_processing import PlaneItem
+from .image_processing import PlaneItem, EditPicture, SaveImage
 from .file_conversion import blend_opener, fbx_opener
 from .DepthByColor import GenerateEdges, NormaliseData, GenerateShapeEdges, GetDistanceBetweenPoints, ColorCheck
 
@@ -52,16 +52,16 @@ def GetlistOfPixels(PolyCount, ColorWeAreLookingFor, plane:PlaneItem): #(0, 255,
     for iterator in range(5):
         match iterator: # this will loop through the image and gather the green pxiels outlined on each side
             #Right
-            case 0: ImageDictionary[iterator] = FindPixels(PolyCount, ImageRow, ImageColumn, base= 0, iteratorValue= 1, ImageArea = AreaOfImage, image = Image, Color=ColorWeAreLookingFor) 
+            case 0: ImageDictionary[iterator] = FindPixels(PolyCount, ImageRow, ImageColumn, base= 0, iteratorValue= 1, ImageArea = AreaOfImage, image = Image, Color=ColorWeAreLookingFor, plane=plane ,isVertical=False) 
             #Left
-            case 1: ImageDictionary[iterator] = FindPixels(PolyCount, ImageRow, ImageColumn, base= ImageRow, iteratorValue= -1, ImageArea = AreaOfImage, image = Image, Color=ColorWeAreLookingFor)
+            case 1: ImageDictionary[iterator] = FindPixels(PolyCount, ImageRow, ImageColumn, base= ImageRow, iteratorValue= -1, ImageArea = AreaOfImage, image = Image, Color=ColorWeAreLookingFor, plane=plane ,isVertical=False)
             #Middle Right
-            case 2: ImageDictionary[iterator] = FindPixels(PolyCount, ImageRow, ImageColumn, base= HalfImageRow, iteratorValue= 1, ImageArea = AreaOfImage, image = Image, Color=ColorWeAreLookingFor)
+            case 2: ImageDictionary[iterator] = FindPixels(PolyCount, ImageRow, ImageColumn, base= HalfImageRow, iteratorValue= 1, ImageArea = AreaOfImage, image = Image, Color=ColorWeAreLookingFor, plane=plane ,isVertical=False)
             #middle Left
-            case 3: ImageDictionary[iterator] = FindPixels(PolyCount, ImageRow, ImageColumn, base= HalfImageRow, iteratorValue= -1, ImageArea = AreaOfImage, image = Image, Color=ColorWeAreLookingFor)
+            case 3: ImageDictionary[iterator] = FindPixels(PolyCount, ImageRow, ImageColumn, base= HalfImageRow, iteratorValue= -1, ImageArea = AreaOfImage, image = Image, Color=ColorWeAreLookingFor, plane=plane, isVertical=False)
             #Vertical
-            case 4: ImageDictionary[iterator] = FindPixels(PolyCount, ImageRow, ImageColumn, base= HalfImageRow, iteratorValue= 1, ImageArea = AreaOfImage, image = Image, Color=ColorWeAreLookingFor, isVertical=True)
-    return ImageDictionary , ImageData , Image
+            case 4: ImageDictionary[iterator] = FindPixels(PolyCount, ImageRow, ImageColumn, base= HalfImageRow, iteratorValue= 1, ImageArea = AreaOfImage, image = Image, Color=ColorWeAreLookingFor, plane=plane, isVertical=True)
+    return ImageDictionary, ImageData, Image
 
 #FindPixels 
 #Description: Finds green pixels depending on the side selected above. 
@@ -83,9 +83,10 @@ def GetlistOfPixels(PolyCount, ColorWeAreLookingFor, plane:PlaneItem): #(0, 255,
 #Return
 #this function returns the list of pixels found
 
-def FindPixels(PolyCount, ImageRow, ImageColumn, base, iteratorValue, ImageArea, image, Color, isVertical = False):
+def FindPixels(PolyCount, ImageRow, ImageColumn, base, iteratorValue, ImageArea, image, Color, plane:PlaneItem, isVertical):
     PixelList = []
-    row = 0; column = 0
+    VertPixels = []
+    row = 0; column = 0; vertRow = 0
     for points in range(ImageArea):
         if abs(row) >= ImageRow:
             if isVertical: break
@@ -96,8 +97,19 @@ def FindPixels(PolyCount, ImageRow, ImageColumn, base, iteratorValue, ImageArea,
         if ColorCheck(image, (row, column), Color):
             PixelList.append((row, column)) #If the pixel list is empty then it is the first pixel to be added
             if isVertical:
-                if (row + PolyCount) > ImageRow : break 
-                else: row = row + PolyCount; column = base
+                if (row + PolyCount) > ImageRow : break
+                else: 
+                    vertRow = row - 1
+                    while (int(image[vertRow, column][0]), int(image[vertRow, column][1]), int(image[vertRow, column][2])) == Color:
+                        vertRow = vertRow - 1
+                    VertPixels.append((vertRow, column))
+                    vertRow = vertRow + PolyCount
+                    while (int(image[vertRow, column][0]), int(image[vertRow, column][1]), int(image[vertRow, column][2])) == Color:
+                        VertPixels.append((vertRow, column))
+                        vertRow = vertRow + PolyCount
+                        EditPicture((0, 255, 200), (row, column), image)
+                    SaveImage(image, plane.ImagePlaneFilePath, "View0")
+                    row = row + PolyCount; column = base
             else:
                 if (column + PolyCount) > ImageColumn : break 
                 else: column = column + PolyCount; row = base
