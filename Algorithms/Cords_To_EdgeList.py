@@ -1,31 +1,46 @@
-def create_edge_value_association(edge_points):
-    edge_values = {}
-    value_counter = 0
-    
-    for edge in edge_points:
-        # Convert edge points to tuple for hashability
-        edge_tuple = (tuple(edge[0]), tuple(edge[1]))
-        edge_rev_tuple = (tuple(edge[1]), tuple(edge[0]))
-        
-        # Check if the edge already has an associated value
-        if edge_tuple not in edge_values and edge_rev_tuple not in edge_values:
-            edge_values[edge_tuple] = value_counter
-            value_counter += 1
-    
-    # Create a list of values corresponding to each edge
-    edge_value_list = [edge_values[(tuple(edge[0]), tuple(edge[1]))] for edge in edge_points]
-    
-    return edge_value_list
+from dataclasses import dataclass, field
+from typing import Dict, Tuple, List
 
-# Test usage:
-edge_points = [
-    [(5, 3), (7, 9)],
-    [(2, 8), (6, 4)],
-    [(0, 1), (3, 7)],
-    [(9, 2), (5, 6)],
-    [(9, 2), (5, 5)]
-    
+# Define the data class for adjacent points
+@dataclass
+class AdjacentPoint:
+    coordinate: Tuple[int, int]
+    adjacent_line: Dict[Tuple[int, int], List[Tuple[int, int]]]
+
+# Function to map a list of coordinate pairs to integer indices
+def map_coordinates_to_indices(user_sequence):
+    point_index = {}  # This dictionary will map points to integers
+    index = 0
+    indexed_pairs = []
+
+    for pair in user_sequence:
+        # Unpack the pair for clarity
+        start, end = pair
+        
+        # Check if the start coordinate is new, if so, add to the point_index
+        if start not in point_index:
+            point_index[start] = index
+            index += 1
+            
+        # Check if the end coordinate is new, if so, add to the point_index
+        if end not in point_index:
+            point_index[end] = index
+            index += 1
+
+        # Append the index pair to the output list
+        indexed_pairs.append((point_index[start], point_index[end]))
+
+    return indexed_pairs
+
+# Example user input
+user_sequence = [
+    ((5, 3), (7, 9)), 
+    ((7, 9), (2, 8)), 
+    ((2, 8), (6, 4)), 
+    ((6, 4), (5, 3))
 ]
 
-edge_values = create_edge_value_association(edge_points)
-print(edge_values)
+# Get the output list of indexed pairs
+indexed_edge_list = map_coordinates_to_indices(user_sequence)
+
+print("Indexed Edge List:", indexed_edge_list)
