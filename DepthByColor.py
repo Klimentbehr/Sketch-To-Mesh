@@ -43,28 +43,15 @@ class EdgeData:
 def GenerateShapeEdges(radius:int, plane:PlaneItem, ColorToLookFor):
     imageDataClass = ImageDataClass(radius, plane, ColorToLookFor)
     
-    # resize the image to 200x200 pixels
-    original_shape = imageDataClass.image.shape[:2] 
+    original_size = imageDataClass.image.shape[:2]  # Capture original dimensions
     new_size = (200, 200)
     imageDataClass.image = cv2.resize(imageDataClass.image, new_size)
     
-    # update to new size
-    imageDataClass.__setattr__('ImageShape', new_size)
-    
-    SizedEdgePoints, MultipliersValues, _ = GetPointsFromImage(
-        imageDataClass.image, plane, original_shape[0], original_shape[1], radius
-    )
-    
-    # calculate new multipliers for resizing points
-    x_multiplier = new_size[1] / original_shape[1]
-    y_multiplier = new_size[0] / original_shape[0]
-    
-    # scale edge points to fit the new image size
-    FinishedList = [
-        (round(point[0] * x_multiplier), round(point[1] * y_multiplier)) for point in SizedEdgePoints
-    ]
-    
-    for points in SizedEdgePoints: FinishedList.append((round(points[0] / MultipliersValues[0]), round(points[1] / MultipliersValues[1])))
+    FinishedList =[]
+    SizedEdgePoints, MulipliersValues, imageShape = GetPointsFromImage(imageDataClass.image, plane, imageDataClass.ImageShape[0], imageDataClass.ImageShape[1], radius)
+    imageDataClass.__setattr__('ImageShape', imageShape)
+    imageDataClass.__setattr__('image', cv2.resize(imageDataClass.image, (imageDataClass.ImageShape[1], imageDataClass.ImageShape[0])))
+    for points in SizedEdgePoints: FinishedList.append((round(points[0] / MulipliersValues[0]), round(points[1] / MulipliersValues[1])))
 
     for points in FinishedList:
         EditPicture((0,0,0), points, imageDataClass.image)

@@ -42,7 +42,7 @@ def GetlistOfPixels(PolyCount, ColorWeAreLookingFor, plane:PlaneItem): #(0, 255,
     Example for the dataset is: {0: [(176,142), (175, 143)...]}
     """
     ImageDictionary = {} #Dictionary that holds the placement of the pixels, the side is the key 
-    Image = cv2.imread(plane.PlaneFilepath)
+    Image = cv2.imread(plane.ImagePlaneFilePath)
     ImageRow = Image.shape[0] - 1
     ImageColumn = Image.shape[1] -1
     HalfImageRow = round(ImageRow * 0.5)
