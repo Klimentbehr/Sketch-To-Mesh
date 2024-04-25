@@ -52,13 +52,13 @@ def GenerateShapeEdges(radius:int, plane:PlaneItem, ColorToLookFor):
         EditPicture((0,0,0), points, imageDataClass.image)
         SaveImage(imageDataClass.image, plane.ImagePlaneFilePath, "View0")
 
-    # FinishedDict = {key: 0 for key in FinishedList}
+    FinishedDict = {key: 0 for key in FinishedList}
 
-    # AdjacentPoint:AdjacentEdge = CheckForInsideLines(imageDataClass, FinishedDict)
-    # for adjacentLines in AdjacentPoint.AdjacentLine: 
-    #     for points in AdjacentPoint.AdjacentLine[adjacentLines]: #adds on the extras lines 
-    #         EditPicture(imageDataClass.Color, points, imageDataClass.image)
-    #         SaveImage(imageDataClass.image, imageDataClass.plane.ImagePlaneFilePath, "View0")
+    AdjacentPoint:AdjacentEdge = CheckForInsideLines(imageDataClass, FinishedDict)
+    for adjacentLines in AdjacentPoint.AdjacentLine: 
+        for points in AdjacentPoint.AdjacentLine[adjacentLines]: #adds on the extras lines 
+            EditPicture(imageDataClass.Color, points, imageDataClass.image)
+            SaveImage(imageDataClass.image, imageDataClass.plane.ImagePlaneFilePath, "View0")
  
     EdgeDataList = CreateEdgeData(FinishedList, imageDataClass)
     EdgeDataList = CalculateLocationsOfAvaliblePixelsAroundPoint(EdgeDataList, imageDataClass)
