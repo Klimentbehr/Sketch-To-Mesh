@@ -377,7 +377,7 @@ def camera_corner():
     
 def camera_test():
     
-    cap = cv2.VideoCapture(1)
+    cap = cv2.VideoCapture(0)
 
     while True:
         ret, frame = cap.read()
@@ -510,7 +510,7 @@ def find_cube_corners(frame):
 
 # testing using trackers instead of feature detectors
 def testing_tracker():
-    cap = cv2.VideoCapture(1)
+    cap = cv2.VideoCapture(0)
     ret, frame = cap.read()
     if not ret:
         print("Failed to capture video")
@@ -540,7 +540,7 @@ def testing_tracker():
 #
 def test_shit():
     
-    cap = cv2.VideoCapture(1)
+    cap = cv2.VideoCapture(0)
 
     while True:
         _, frame = cap.read()
@@ -579,10 +579,10 @@ import time
     
 def cringe_ai_model():
     # testing this cringe code that i barely understand
-    cap = cv2.VideoCapture(1)
+    cap = cv2.VideoCapture(0)
     model = load_model()
     transform = get_transform()
-    time_threshold = 2  # Process 1 frame every 5 seconds
+    time_threshold = 50  # Process 1 frame every 5 seconds
     last_time = time.time()
 
     while True:
