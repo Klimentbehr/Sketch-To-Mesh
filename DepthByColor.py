@@ -42,19 +42,42 @@ class EdgeData:
 #outputlist: This is the MeshStructure of the simplified mesh
 def GenerateShapeEdges(radius:int, plane:PlaneItem, ColorToLookFor):
     imageDataClass = ImageDataClass(radius, plane, ColorToLookFor)
-    FinishedList =[]
-    SizedEdgePoints, MulipliersValues, imageShape = GetPointsFromImage(imageDataClass.image, plane, imageDataClass.ImageShape[0], imageDataClass.ImageShape[1], radius)
+    
+    # resize to 200x200pixels
+    standard_size = (200, 200)
+    imageDataClass.image = cv2.resize(imageDataClass.image, standard_size)
+    imageDataClass.__setattr__('ImageShape', standard_size)
+    
+
+    # Display the resized image
+    cv2.imshow('test after resize1', imageDataClass.image)
+    cv2.waitKey(0)  
+
+    FinishedList = []
+    SizedEdgePoints, MulipliersValues, imageShape = GetPointsFromImage(
+        imageDataClass.image, plane, imageDataClass.ImageShape[0], imageDataClass.ImageShape[1], radius
+    )
+
+    # maybe will be removing this. seems reduntant to further resize it?
     imageDataClass.__setattr__('ImageShape', imageShape)
     imageDataClass.__setattr__('image', cv2.resize(imageDataClass.image, (imageDataClass.ImageShape[1], imageDataClass.ImageShape[0])))
-    for points in SizedEdgePoints: FinishedList.append((round(points[0] / MulipliersValues[0]), round(points[1] / MulipliersValues[1])))
+
+    for points in SizedEdgePoints:
+        FinishedList.append((round(points[0] / MulipliersValues[0]), round(points[1] / MulipliersValues[1])))
 
     for points in FinishedList:
         EditPicture((0,0,0), points, imageDataClass.image)
-        SaveImage(imageDataClass.image, plane.ImagePlaneFilePath, "View0")
- 
+    
+    # testing display resized
+    cv2.imshow('test', imageDataClass.image)
+    cv2.waitKey(0)  
+
+    SaveImage(imageDataClass.image, plane.ImagePlaneFilePath, "View0")
     EdgeDataList = CreateEdgeData(FinishedList, imageDataClass)
     EdgeDataList = CalculateLocationsOfAvaliblePixelsAroundPoint(EdgeDataList, imageDataClass)
     outputlist = CycleThroughEdgePointsForColor(EdgeDataList, imageDataClass)
+
+    cv2.destroyAllWindows()  # Close all OpenCV windows
     return outputlist
 
 #GetPointsFromImage
