@@ -361,11 +361,20 @@ def CalculateZAxis(EdgeDataList:dict):
     iter = 0
     MergedTransposedList = []
     for tpoints in transposedMesh:
-        CurrSmallestDstBetweenPoints = (1000000000, (0,0), (0,0))
+        CurrSmallestDstBetweenPoints = 1000000000
+        closestPoint = (0,0,0)
         for points in FinalEdgeData:
             DstBetweenPoints = GetDistanceBetweenPoints((tpoints[0], tpoints[1]), (points[0], points[1]))
-            if DstBetweenPoints < CurrSmallestDstBetweenPoints[0]: CurrSmallestDstBetweenPoints = (DstBetweenPoints, tpoints, points)
-        MergedTransposedList.append(GetAverageOfAllCoordinateValuesInList([tpoints, points], True))
+            if DstBetweenPoints < CurrSmallestDstBetweenPoints: 
+                if len(MergedTransposedList) == 0:
+                    CurrSmallestDstBetweenPoints = DstBetweenPoints
+                    closestPoint = points
+                else:
+                    if MergedTransposedList[-1][0] == tpoints: continue
+                    else:
+                        CurrSmallestDstBetweenPoints = DstBetweenPoints
+                        closestPoint = points
+        MergedTransposedList.append(GetAverageOfAllCoordinateValuesInList([tpoints, closestPoint], True))
         iter += 1
     
     iter = 0
