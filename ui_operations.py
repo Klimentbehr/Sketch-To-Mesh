@@ -107,19 +107,48 @@ class Reset_Input_Images(bpy.types.Operator):
 
         for plane_data in GlobalPlaneDataArray :
             #Finds the Images Saved
-            ImageFilePath = os.path.abspath("ImageFolder\\" + "View" + str(Itervalue) + plane_data.PlaneFilepath[plane_data.PlaneFilepath.rfind("."): ] ) 
-            if path.exists(ImageFilePath): 
-                os.remove(ImageFilePath) # if we find that file we will delete it
-                # selects the image plane in the array 
-                bpy.data.objects[plane_data.ImagePlaneName].select_set(True)
-                #deletes the image plane in the array
-                bpy.ops.object.delete(use_global=False, confirm=False)
-                #increases the itervale to reach the next View string
-            Itervalue = Itervalue + 1 
+            ImageFilePaths = []
+            for ImageValues in range(3):
+                ImageFilePaths.append(os.path.abspath("ImageFolder\\" + "View" + str(ImageValues) + plane_data.PlaneFilepath[plane_data.PlaneFilepath.rfind("."): ] ))
+                if path.exists(ImageFilePaths[ImageValues]): os.remove(ImageFilePaths[ImageValues]) # if we find that file we will delete it
+
+            
+            bpy.data.objects[plane_data.ImagePlaneName].select_set(True)# selects the image plane in the array 
+            bpy.ops.object.delete(use_global=False, confirm=False)#deletes the image plane in the array 
+            Itervalue = Itervalue + 1 #increases the itervalue to reach the next View string
 
         # clears the PlaneData Array
         GlobalPlaneDataArray.clear() 
+
         return {'FINISHED'}
+    
+
+class Reset_Mesh_Collection(bpy.types.Operator): 
+    bl_idname = "object.reset_mesh_collection"
+    bl_label = "Reset_Mesh"
+    bl_description = "Resets the mesh previously created also resets the input images"
+
+    def execute(self, context):
+        Itervalue = 0
+
+        for plane_data in GlobalPlaneDataArray :
+            #Finds the Images Saved
+            ImageFilePaths = []
+            for ImageValues in range(3):
+                ImageFilePaths.append(os.path.abspath("ImageFolder\\" + "View" + str(ImageValues) + plane_data.PlaneFilepath[plane_data.PlaneFilepath.rfind("."): ] ))
+                if path.exists(ImageFilePaths[ImageValues]): os.remove(ImageFilePaths[ImageValues]) # if we find that file we will delete it
+
+            
+            bpy.data.objects[plane_data.ImagePlaneName].select_set(True)# selects the image plane in the array 
+            bpy.ops.object.delete(use_global=False, confirm=False)#deletes the image plane in the array 
+            Itervalue = Itervalue + 1 #increases the itervalue to reach the next View string
+
+        # clears the PlaneData Array
+        GlobalPlaneDataArray.clear() 
+        collection = bpy.data.collections.get("Sketch_to_Mesh_Collection")
+        if collection is not None: bpy.data.collections.remove(collection)
+        return {'FINISHED'}
+
 
 
 class PlaceMesh(bpy.types.Operator):

@@ -40,10 +40,31 @@ class VIEW3D_PT_Sketch_To_Mesh_MeshSettings_Panel(bpy.types.Panel):
         row = layout.row()
         row.operator("wm.place_mesh", text="Place Mesh")
         row = layout.row()
+        row.operator("object.reset_mesh_collection", text="Reset Mesh")
+        row = layout.row()
         row.operator("wm.database_export", text="Export File")
         row = layout.row()
+
         row.prop(context.scene, "mesh_rating", text="Mesh Rating", slider=True)
 
+class DataBaseUIMenu(bpy.types.Panel):
+    bl_idname = "wm.database_ui_menu"
+    bl_label = "Database Menu"
+    bl_parent_id = "_PT_Sketch_To_Mesh_Main_Panel" 
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+
+    def draw(self, context):    
+        layout = self.layout
+        row = layout.row()
+        if User.UserSignedIn == False :
+            row.operator("wm.database_register", text="Register User")
+            row = layout.row()
+            row.operator("wm.database_login", text="Login User")
+        else :
+            row.operator("wm.access_database", text="Access Database") 
+            row = layout.row() 
+            row.operator("wm.user_logout", text="Logout") # TODO: logout function in authentication
 
 class VIEW3D_PT_Sketch_To_Mesh_Testing(bpy.types.Panel):  
     bl_label = "Testing"
@@ -67,21 +88,3 @@ class VIEW3D_PT_Sketch_To_Mesh_Testing(bpy.types.Panel):
         row = layout.row()
         row.operator("wm.toast_notification", text="Toast Test")
 
-class DataBaseUIMenu(bpy.types.Panel):
-    bl_idname = "wm.database_ui_menu"
-    bl_label = "Database Menu"
-    bl_parent_id = "_PT_Sketch_To_Mesh_Main_Panel" 
-    bl_space_type = 'VIEW_3D'
-    bl_region_type = 'UI'
-
-    def draw(self, context):    
-        layout = self.layout
-        row = layout.row()
-        if User.UserSignedIn == False :
-            row.operator("wm.database_register", text="Register User")
-            row = layout.row()
-            row.operator("wm.database_login", text="Login User")
-        else :
-            row.operator("wm.access_database", text="Access Database") 
-            row = layout.row() 
-            row.operator("wm.user_logout", text="Logout") # TODO: logout function in authentication
