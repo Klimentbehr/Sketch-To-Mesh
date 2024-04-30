@@ -1,7 +1,7 @@
 import cv2
 import math
 from .image_processing import PlaneItem, mark_corners, EditPicture, SaveImage
-from .DepthByColorHelper import AdjacentEdge, ImageDataClass, GetSlope, calucalateYIntercept, GetUniquePoints, CheckForInsideLines, CreateSolidLine, GetDistanceBetweenPoints, ColorCheck, GetFilledCircle, GetAverageOfAllCoordinateValuesInList, GetAverageDstBetweenPoints, getCircle, GetClosetPointsToValue, GetUniquePoints
+from .DepthByColorHelper import AdjacentEdge, ImageDataClass, GetSlope, calucalateYIntercept, GetUniquePoints, CheckForInsideLines, CreateSolidLine, GetDistanceBetweenPoints, ColorCheck, GetFilledCircle, GetAverageOfAllCoordinateValuesInList, GetAverageDstBetweenPoints, getCircle, GetClosetPointsToValue, GetUniquePoints, GetPointsWithinRadius
 from threading import Thread, Lock
 from dataclasses import dataclass
 
@@ -40,24 +40,28 @@ class EdgeData:
 
 #Returns
 #outputlist: This is the MeshStructure of the simplified mesh
-def GenerateShapeEdges(radius:int, plane:PlaneItem, ColorToLookFor):
+def GenerateShapeEdges(radius:int, plane:PlaneItem, ColorToLookFor, CalculatedRadius = False):
     imageDataClass = ImageDataClass(radius, plane, ColorToLookFor)
-    
-    original_size = imageDataClass.image.shape[:2]  # Capture original dimensions
-    new_size = (200, 200)
-    imageDataClass.image = cv2.resize(imageDataClass.image, new_size)
-    
-    FinishedList =[]
-    SizedEdgePoints, MulipliersValues, imageShape = GetPointsFromImage(imageDataClass.image, plane, imageDataClass.ImageShape[0], imageDataClass.ImageShape[1], radius)
+    SizedEdgePoints, MulipliersValues, imageShape = GetPointsFromImage(imageDataClass.image, pla
     imageDataClass.__setattr__('ImageShape', imageShape)
     imageDataClass.__setattr__('image', cv2.resize(imageDataClass.image, (imageDataClass.ImageShape[1], imageDataClass.ImageShape[0])))
-    for points in SizedEdgePoints: FinishedList.append((round(points[0] / MulipliersValues[0]), round(points[1] / MulipliersValues[1])))
 
-    for points in FinishedList:
+    #for points in SizedEdgePoints: FinishedList.append((round(points[0] / MulipliersValues[0]), round(points[1] / MulipliersValues[1])))
+    imageDataClass.__setattr__('radius', radius)
+
+    for points in SizedEdgePoints:
         EditPicture((0,0,0), points, imageDataClass.image)
         SaveImage(imageDataClass.image, plane.ImagePlaneFilePath, "View0")
+
+    # FinishedDict = {key: 0 for key in FinishedList}
+
+    # AdjacentPoint:AdjacentEdge = CheckForInsideLines(imageDataClass, FinishedDict)
+    # for adjacentLines in AdjacentPoint.AdjacentLine: 
+    #     for points in AdjacentPoint.AdjacentLine[adjacentLines]: #adds on the extras lines 
+    #         EditPicture(imageDataClass.Color, points, imageDataClass.image)
+    #         SaveImage(imageDataClass.image, imageDataClass.plane.ImagePlaneFilePath, "View0")
  
-    EdgeDataList = CreateEdgeData(FinishedList, imageDataClass)
+    EdgeDataList = CreateEdgeData(SizedEdgePoints, imageDataClass)
     EdgeDataList = CalculateLocationsOfAvaliblePixelsAroundPoint(EdgeDataList, imageDataClass)
     outputlist = CycleThroughEdgePointsForColor(EdgeDataList, imageDataClass)
     return outputlist
@@ -73,34 +77,36 @@ def GenerateShapeEdges(radius:int, plane:PlaneItem, ColorToLookFor):
 #ImageColumn: This is the Lebngth of the image
 
 #Returns
-#This function returns the list of edgePoint coordinates, The Sizers for the row and column of the image, and the size of the oringinal image
-def GetPointsFromImage(image, plane:PlaneItem, ImageRow, ImageColumn, radius):
+#This function returns the list of edgePoint coordinates and The Sizers for the row and column of the image
+def GetPointsFromImage(image, plane:PlaneItem):
     CvEdgePointArray, imageShape = mark_corners(plane.PlaneFilepath)
-    EdgeImageRow = imageShape[0] -1
-    EdgeImageColumn = imageShape[1] -1
-    EnlargedImageRowMultiplier = ImageRow / EdgeImageRow
-    EnlargedImageColumnMultiplier = ImageColumn / EdgeImageColumn
+
+    XScalar = (200 /imageShape[0] ) 
+    YScalar = (200 / imageShape[1])
+
     EdgePointArray = []
     EdgepointsForCircle = []
     EdgePoints=[]
 
     for point in CvEdgePointArray:
-        EnlargedRow = round(point[0] * EnlargedImageRowMultiplier)
-        EnlargedColummn = round(point[1] * EnlargedImageColumnMultiplier)
+        EnlargedRow = round(point[0] * XScalar)
+        EnlargedColummn = round(point[1] * YScalar)
         EdgePointArray.append((EnlargedRow, EnlargedColummn))
         
     AveragePoint = GetAverageOfAllCoordinateValuesInList(EdgePointArray)
     AveragePoint = ((round(AveragePoint[0]), round(AveragePoint[1])))
 
     AverageValueTODstCircle = GetAverageDstBetweenPoints(EdgePointArray, AveragePoint)
-    CirclePoints = getCircle(AveragePoint, image, AverageValueTODstCircle+round(EnlargedRow), True)
-    for CircleEdges in CirclePoints: #CirclePoints in a list of lists so we searchthrough each list to see if there are any edges
-        EdgepointsForCircle = EdgepointsForCircle + GetClosetPointsToValue(EdgePointArray, CircleEdges)
+    CirclePoints = getCircle(AveragePoint, image, AverageValueTODstCircle + 300, True, True)
+
+    for CircleEdges in CirclePoints: EdgepointsForCircle = EdgepointsForCircle + GetClosetPointsToValue(EdgePointArray, CircleEdges)#CirclePoints in a list of lists so we searchthrough each list to see if there are any edges
     EdgePoints = OrderPoints(GetUniquePoints(EdgepointsForCircle))
     EdgePoints.remove(EdgePoints[-1])
-    return EdgePoints, (EnlargedImageRowMultiplier, EnlargedImageColumnMultiplier), (imageShape[0], imageShape[1])
- 
 
+    EdgePoints = GetPointsWithinRadius(EdgePoints, 20)
+
+    return EdgePoints, (XScalar, YScalar), (200, 200)
+ 
 def OrderPoints(circle_points):
     ordered_list = []
     CurrPoint = circle_points[0]
@@ -154,7 +160,8 @@ def CreateEdgeData(FinishedList:list, imageDataClass:ImageDataClass):
         SaveImage(imageDataClass.image, imageDataClass.plane.ImagePlaneFilePath, "View0")
         #mutex.release()
         CurrEdgePoint.__setattr__('LinePoints', Linedata)
-        #for threads in ThreadList:threads.join()    
+        #for threads in ThreadList:threads.join()  
+          
     global AdjacentPoint
     AdjacentPoint = CheckForInsideLines(imageDataClass, EdgeDataList)
     for adjacentLines in AdjacentPoint.AdjacentLine: 
@@ -273,6 +280,7 @@ def CalculateCollision(pointWeCheck:list, LinePointDictionary:dict, imageDataCla
 #EdgeDataList: Returns the updated Edgedata list
 def CycleThroughEdgePointsForColor(EdgeDataList, imageDataClass:ImageDataClass):
     OringalImage= cv2.imread(imageDataClass.plane.PlaneFilepath)
+    OringalImage = cv2.resize(OringalImage, (200, 200))
     AverageColorList = []
 
     for edges in EdgeDataList: 
@@ -342,45 +350,41 @@ def CalculateZAxis(EdgeDataList:dict):
 
     iter = 0
     ZAverage = 0
-    AdjacentEdgeList = []
     for points in FinalEdgeData:
         if iter in AdjacentEdgeZValueReference: ZAverage += ZData
         iter += 1
         ZAverage /= AdjacentEdgeZValueReference.__len__()
 
     TemptFinalEdgeData = FinalEdgeData.copy()
-    TemptFinalEdgeData.append((AdjacentPoint.Coordinates[0], AdjacentPoint.Coordinates[1], ZAverage))
+    BaseAdjacentPoint = (AdjacentPoint.Coordinates[0], AdjacentPoint.Coordinates[1], ZAverage) #holds the adjacent point
+    TemptFinalEdgeData.append(BaseAdjacentPoint)
     meshMidpoint = GetMidPoint(TemptFinalEdgeData) #retrieves the midpoint from current edge data
     transposedMesh = TransposeMesh(meshMidpoint, TemptFinalEdgeData) #transposes the matrix so that that points are generated that mirror the current 3d mesh
-
+    TransposedAdjacentPoint = transposedMesh[-1] #holds the transposed adjacent 
+    transposedMesh.remove(TransposedAdjacentPoint) 
+    
     iter = 0
-    AdjacentEdgeListTransposed = []
     MergedTransposedList = []
     for tpoints in transposedMesh:
         CurrSmallestDstBetweenPoints = (1000000000, (0,0), (0,0))
         for points in FinalEdgeData:
             DstBetweenPoints = GetDistanceBetweenPoints((tpoints[0], tpoints[1]), (points[0], points[1]))
             if DstBetweenPoints < CurrSmallestDstBetweenPoints[0]: CurrSmallestDstBetweenPoints = (DstBetweenPoints, tpoints, points)
-        
         MergedTransposedList.append(GetAverageOfAllCoordinateValuesInList([tpoints, points], True))
         iter += 1
-
-    MergedTransposedList.remove(MergedTransposedList[-1])
-    TransposedAdjacentPoint = transposedMesh[-1]
-    transposedMesh.remove(TransposedAdjacentPoint)
+    
     iter = 0
+    AdjacentEdgeList = []
     for points in MergedTransposedList:
-        if iter in AdjacentEdgeZValueReference:
-            AdjacentEdgeList.append((len(NormalisedZData), iter))
-        else:
-            AdjacentEdgeListTransposed.append((len(NormalisedZData)+1, iter))
+        if iter in AdjacentEdgeZValueReference: AdjacentEdgeList.append((len(NormalisedZData), iter))
+        else: AdjacentEdgeList.append((len(NormalisedZData)+1, iter))
         iter += 1
 
     MeshStructure = GenerateEdges(MergedTransposedList, "BlenderPoints")
     MeshStructure[0].append((AdjacentPoint.Coordinates[0], AdjacentPoint.Coordinates[1], ZAverage)) #adds the adjacentPoint not transposed
     MeshStructure[0].append((TransposedAdjacentPoint)) #adds the transposed adjacent point
     MeshStructure[0].append(meshMidpoint) #adds the midpoint
-    MeshStructure[1] = MeshStructure[1] + AdjacentEdgeList + AdjacentEdgeListTransposed #ands the lines connecting the adjacent points
+    MeshStructure[1] = MeshStructure[1] + AdjacentEdgeList #ands the lines connecting the adjacent points
     return MeshStructure
 
 #NormaliseData
@@ -458,8 +462,8 @@ def GenerateEdges(VertList:list, request:str, VertList2:list = []):
 def GetMidPoint(MeshStructure):
     estimateMidpoints = [] #This will hold the potential midpoints before they are averaged out
     furthestDistance = 0 #This will hold the furthest distance from one point for comparison
-    tempPoint = [1, 2, 3] #This will hold a temporary point for whatever point we need
     for point1 in MeshStructure:
+        tempPoint = list(point1) #This will hold a temporary point for whatever point we need
         for point2 in MeshStructure:
             if (point1 ==  point2): continue #if you are comparing the same point just continue on and ignore 
             else: 
