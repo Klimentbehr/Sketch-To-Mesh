@@ -137,7 +137,7 @@ def mark_corners(image_path, max_corners=100):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
     # Detect corners
-    corners = cv2.goodFeaturesToTrack(gray, maxCorners=max_corners, qualityLevel=0.01, minDistance=10)
+    corners = cv2.goodFeaturesToTrack(gray, maxCorners=10, qualityLevel=0.01, minDistance=10)
     
     cornerArray = []
     # Refine the corner locations
@@ -146,9 +146,9 @@ def mark_corners(image_path, max_corners=100):
         for corner in corners:
             x, y = corner.ravel()
             cornerArray.append((y, x))
-            #EditPicture((255, 0, 0), (y,x), image)
+            EditPicture((255, 0, 0), (y,x), image)
             cv2.circle(image, (x, y), 3, (255, 0, 0), -1)
-    #SaveImage(image, image_path, "View1")
+    SaveImage(image, image_path, "View1")
     return cornerArray, image.shape
 
 #     # did i really just use math here
@@ -369,4 +369,5 @@ def SaveImage(image, filepath:str, filename:str):
     os.chdir("ImageFolder") #changes the directory to the folder where we are going to save the file
     cv2.imwrite(filename + Extension, image ) #saves the image
     os.chdir("..\\") #goes back one directory   
+
 
