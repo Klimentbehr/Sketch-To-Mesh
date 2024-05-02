@@ -30,10 +30,19 @@ This mesh will then be exported so that the user can do what they want with the 
   Next, you might want to use one of the operators already made and copy it to your file. Make your changes to the operator.
   Finally, put your operator into the register and unregister
 
+## Required Add-ons:
+  StM requires a couple of different addons to be utilized. In Blender, click on Edit->Preferences->Addons and please add any missing addons.
+
+<img src="assets/xthWeewpng.png" width="800">
+
 ## Usage:
-  To access the plugin inside Blender, first you need to find the sidebar tab and select the STM plugin.
-  ![alt test](https://imgur.com/a/QR6786q)
-  ![alt test](https://imgur.com/a/nzaRTi5)
+  To access the plugin inside Blender, first you need to find the sidebar tab and select the STM plugin. 
+  For further information, please refer to our documentation [PLACEHOLDER].
+
+  <img src="assets/KqsD0pj.png" width="800"> 
+  <img src="assets/yQSLf7Q.png" width="800">
+  <img src="assets/aWGsxR.png" width="800">
+  
 
 ## Contributors:
   - Judah Smith-Dyer
@@ -41,7 +50,7 @@ This mesh will then be exported so that the user can do what they want with the 
   - James Burns
   - Kliment Behr
 
-## Project:
+## Project Status:
   Pre-alpha
 
 ## License: 
