@@ -1,21 +1,21 @@
-Sketch-to-Mesh 
+# Sketch-to-Mesh 
 
-Introduction:
+## Introduction:
   This application's purpose is to convert a sketch or drawing into a mesh that can be imported into Blender. 
 The application will take a set of images in .png extensions and run those images through a machine-learning model to output a usable mesh. 
 This mesh will then be exported so that the user can do what they want with the file, such as copying and sharing the file or personally using it.
 
-Technologies:
+## Technologies:
   - bcrypt
   - open CV
   - bpy (Blender Python Library)
   - pymongo
 
-Features: 
+## Features: 
   Sketch-To-Mesh takes in multiple images and then outputs a mesh based on those images.
   The addon also has a database feature that allows users to save images and mesh objects to be accessed at a later date.
 
-Installation :
+## Installation:
 - First, the user must have Blender Installed.
 - Once Blender is installed the user must download the Sketch-to-Mesh file and save it in a place they can find again
 - Open Blender navigation to the Edit tab and then navigate to the Preferences button at the bottom
@@ -24,17 +24,27 @@ Installation :
 - You should now see the Generic Sketch-To-Mesh add-on selected in the tab. 
 - You may need to refresh the addons or restart Blender
 
-Development Setup:
+## Development Setup:
   If you would like to further develop the sketch-to-mesh addon you first would need a good idea of how the Python language works. 
   First, you might want to make a new file for your new feature. To use this feature use this "from 'YourFeature' import 'YourClass'" 
   Next, you might want to use one of the operators already made and copy it to your file. Make your changes to the operator.
   Finally, put your operator into the register and unregister
 
-Usage:
+## Usage:
   To access the plugin inside Blender, first you need to find the sidebar tab and select the STM plugin.
   ![alt test](https://imgur.com/a/QR6786q)
   ![alt test](https://imgur.com/a/nzaRTi5)
 
+## Contributors:
+  - Judah Smith-Dyer
+  - Rafael Fernandes Da Silva
+  - James Burns
+  - Kliment Behr
+
+## Project:
+  Pre-alpha
+
+## License: 
 MIT License
   Copyright (c) [2024] [Sketch-To-Mesh]
   
@@ -56,13 +66,4 @@ MIT License
   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
   SOFTWARE.
 
-Contributors:
-  - Judah Smith-Dyer
-  - Rafael Fernandes Da Silva
-  - James Burns
-  - Kliment Behr
 
-Project :
-  Pre-alpha
-
-Thank you for downloading Sketch-To-Mesh!
