@@ -1,5 +1,6 @@
 import bpy
 import os
+from os import path
 import cv2
 import io
 import tempfile
@@ -388,3 +389,20 @@ def SearchForClosestPoint(PointArray, startingPoint ):
     NewList: list = PointArray[finalIter:] #adjust the list so that the closest points are now first in the list
     NewList.extend(PointArray[:finalIter]) #adjust the list so that the further points are now after the closest points
     return NewList
+
+
+def ResetImage(GlobalPlaneDataArray:list[PlaneItem]):
+    Itervalue = 0
+
+    for plane_data in GlobalPlaneDataArray :
+        #Finds the Images Saved
+        ImageFilePaths = []
+        for ImageValues in range(3):
+            ImageFilePaths.append(os.path.abspath("ImageFolder\\" + "View" + str(ImageValues) + plane_data.PlaneFilepath[plane_data.PlaneFilepath.rfind("."): ] ))
+            if path.exists(ImageFilePaths[ImageValues]): os.remove(ImageFilePaths[ImageValues]) # if we find that file we will delete it
+            
+        bpy.data.objects[plane_data.ImagePlaneName].select_set(True)# selects the image plane in the array 
+        bpy.ops.object.delete(use_global=False, confirm=False)#deletes the image plane in the array 
+        Itervalue = Itervalue + 1 #increases the itervalue to reach the next View string
+    # clears the PlaneData Array
+    GlobalPlaneDataArray.clear() 
