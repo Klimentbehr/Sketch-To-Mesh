@@ -14,6 +14,10 @@ class VIEW3D_PT_Sketch_To_Mesh_Panel(bpy.types.Panel):
     bl_region_type = "UI"  
     bl_category = "S-T-M"  # Sidebar cName
     
+    def draw_header(self, context): # help button, TODO: implement help page or documentation page on github repo.
+        layout = self.layout
+        layout.operator("wm.url_open", text="Help", icon='QUESTION').url = "https://github.com/Klimentbehr/Sketch-To-Mesh/tree/Development"
+    
     def draw(self, context):  layout = self.layout
 
 # this will need rework.

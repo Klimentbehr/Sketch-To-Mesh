@@ -42,7 +42,7 @@ class EdgeData:
 #outputlist: This is the MeshStructure of the simplified mesh
 def GenerateShapeEdges(radius:int, plane:PlaneItem, ColorToLookFor, CalculatedRadius = False):
     imageDataClass = ImageDataClass(radius, plane, ColorToLookFor)
-    SizedEdgePoints, MulipliersValues, imageShape = GetPointsFromImage(imageDataClass.image, pla
+    SizedEdgePoints, MulipliersValues, imageShape = GetPointsFromImage(imageDataClass.image, plane)
     imageDataClass.__setattr__('ImageShape', imageShape)
     imageDataClass.__setattr__('image', cv2.resize(imageDataClass.image, (imageDataClass.ImageShape[1], imageDataClass.ImageShape[0])))
 
