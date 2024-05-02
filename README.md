@@ -30,6 +30,11 @@ Development Setup:
   Next, you might want to use one of the operators already made and copy it to your file. Make your changes to the operator.
   Finally, put your operator into the register and unregister
 
+Usage:
+  To access the plugin inside Blender, first you need to find the sidebar tab and select the STM plugin.
+  ![alt test](https://imgur.com/a/QR6786q)
+  ![alt test](https://imgur.com/a/nzaRTi5)
+
 MIT License
   Copyright (c) [2024] [Sketch-To-Mesh]
   
