@@ -312,14 +312,16 @@ def DrawMeshToScreen(MeshStructure, self, CollectionName = "Sketch_to_Mesh_Colle
             edges = MeshStructure[1] # Define edges here based on your vertices
             new_mesh.from_pydata(MeshStructure[0], edges, MeshStructure[1])
             new_mesh.update()
-
         # make object from mesh
         new_object = bpy.data.objects.new('Sketch_to_Mesh_mesh', new_mesh)
+
         # make collection
-        new_collection = bpy.data.collections.new(CollectionName)
-        bpy.context.scene.collection.children.link(new_collection)
+        collection = bpy.data.collections.get(CollectionName)
+        if collection == None:
+            collection = bpy.data.collections.new(CollectionName)
+            bpy.context.scene.collection.children.link(collection)
         # add object to scene collection
-        new_collection.objects.link(new_object)
+        collection.objects.link(new_object)
 
 
 #DrawMesh
