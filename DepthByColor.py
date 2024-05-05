@@ -42,7 +42,7 @@ class EdgeData:
 #outputlist: This is the MeshStructure of the simplified mesh
 def GenerateShapeEdges(radius:int, plane:PlaneItem, ColorToLookFor, CalculatedRadius = False):
     imageDataClass = ImageDataClass(radius, plane, ColorToLookFor)
-    SizedEdgePoints, MulipliersValues, imageShape = GetPointsFromImage(imageDataClass.image, pla
+    SizedEdgePoints, MulipliersValues, imageShape = GetPointsFromImage(imageDataClass.image, plane)
     imageDataClass.__setattr__('ImageShape', imageShape)
     imageDataClass.__setattr__('image', cv2.resize(imageDataClass.image, (imageDataClass.ImageShape[1], imageDataClass.ImageShape[0])))
 
@@ -53,15 +53,16 @@ def GenerateShapeEdges(radius:int, plane:PlaneItem, ColorToLookFor, CalculatedRa
         EditPicture((0,0,0), points, imageDataClass.image)
         SaveImage(imageDataClass.image, plane.ImagePlaneFilePath, "View0")
 
-    FinishedDict = {key: 0 for key in FinishedList}
 
-    AdjacentPoint:AdjacentEdge = CheckForInsideLines(imageDataClass, FinishedDict)
-    for adjacentLines in AdjacentPoint.AdjacentLine: 
-        for points in AdjacentPoint.AdjacentLine[adjacentLines]: #adds on the extras lines 
-            EditPicture(imageDataClass.Color, points, imageDataClass.image)
-            SaveImage(imageDataClass.image, imageDataClass.plane.ImagePlaneFilePath, "View0")
+    # FinishedDict = {key: 0 for key in EdgeDataList}
+
+    # AdjacentPoint:AdjacentEdge = CheckForInsideLines(imageDataClass, FinishedDict)
+    # for adjacentLines in AdjacentPoint.AdjacentLine: 
+    #     for points in AdjacentPoint.AdjacentLine[adjacentLines]: #adds on the extras lines 
+    #         EditPicture(imageDataClass.Color, points, imageDataClass.image)
+    #         SaveImage(imageDataClass.image, imageDataClass.plane.ImagePlaneFilePath, "View0")
  
-    EdgeDataList = CreateEdgeData(SizedEdgePoints, imageDataClass)
+    EdgeDataList = CreateEdgeData(SizedEdgePoints, imageDataClass)    
     EdgeDataList = CalculateLocationsOfAvaliblePixelsAroundPoint(EdgeDataList, imageDataClass)
     outputlist = CycleThroughEdgePointsForColor(EdgeDataList, imageDataClass)
     return outputlist
