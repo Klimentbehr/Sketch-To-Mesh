@@ -88,7 +88,7 @@ def unregister():
     bpy.utils.unregister_class(OBJECT_OT_add_plane_item)
     bpy.utils.unregister_class(Reset_Input_Images)
     bpy.utils.unregister_class(Reset_Mesh_Collection)
-
+    
     bpy.utils.unregister_class(VIEW3D_PT_Sketch_To_Mesh_Panel)
     bpy.utils.unregister_class(VIEW3D_PT_Sketch_To_Mesh_Views_FilePath_Panel)
     bpy.utils.unregister_class(PlaceImageIn3D)

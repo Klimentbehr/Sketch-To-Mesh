@@ -14,7 +14,12 @@ class VIEW3D_PT_Sketch_To_Mesh_Panel(bpy.types.Panel):
     bl_region_type = "UI"  
     bl_category = "S-T-M"  # Sidebar Name
     
+    def draw_header(self, context): # help button, TODO: implement help page or documentation page on github repo.
+        layout = self.layout
+        layout.operator("wm.url_open", text="Help", icon='QUESTION').url = "https://github.com/Klimentbehr/Sketch-To-Mesh/tree/Development"
+    
     def draw(self, context):  layout = self.layout
+
 
 class VIEW3D_PT_Sketch_To_Mesh_Testing(bpy.types.Panel):  
     bl_label = "Testing"
@@ -38,21 +43,3 @@ class VIEW3D_PT_Sketch_To_Mesh_Testing(bpy.types.Panel):
         row = layout.row()
         row.operator("wm.toast_notification", text="Toast Test")
 
-class DataBaseUIMenu(bpy.types.Panel):
-    bl_idname = "wm.database_ui_menu"
-    bl_label = "Database Menu"
-    bl_parent_id = "_PT_Sketch_To_Mesh_Main_Panel" 
-    bl_space_type = 'VIEW_3D'
-    bl_region_type = 'UI'
-
-    def draw(self, context):    
-        layout = self.layout
-        row = layout.row()
-        if User.UserSignedIn == False :
-            row.operator("wm.database_register", text="Register User")
-            row = layout.row()
-            row.operator("wm.database_login", text="Login User")
-        else :
-            row.operator("wm.access_database", text="Access Database") 
-            row = layout.row() 
-            row.operator("wm.user_logout", text="Logout") # TODO: logout function in authentication
