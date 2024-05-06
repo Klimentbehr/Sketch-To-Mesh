@@ -67,8 +67,7 @@ class VIEW3D_PT_Sketch_To_Mesh_Views_FilePath_Panel(bpy.types.Panel):
     bl_region_type = 'UI'
 
     @classmethod
-    def poll(self,context):
-        return context.mode == 'OBJECT'
+    def poll(self,context): return context.mode == 'OBJECT'
     
     def draw(self, context):
         layout = self.layout
@@ -104,21 +103,18 @@ class Reset_Input_Images(bpy.types.Operator):
 
     def execute(self, context):
         Itervalue = 0
-
+         #Finds the Images Saved
         for plane_data in GlobalPlaneDataArray :
-            #Finds the Images Saved
             ImageFilePaths = []
             for ImageValues in range(3):
                 ImageFilePaths.append(os.path.abspath("ImageFolder\\" + "View" + str(ImageValues) + plane_data.PlaneFilepath[plane_data.PlaneFilepath.rfind("."): ] ))
                 if path.exists(ImageFilePaths[ImageValues]): os.remove(ImageFilePaths[ImageValues]) # if we find that file we will delete it
-
             
             bpy.data.objects[plane_data.ImagePlaneName].select_set(True)# selects the image plane in the array 
             bpy.ops.object.delete(use_global=False, confirm=False)#deletes the image plane in the array 
             Itervalue = Itervalue + 1 #increases the itervalue to reach the next View string
 
-        # clears the PlaneData Array
-        GlobalPlaneDataArray.clear() 
+        GlobalPlaneDataArray.clear()  # clears the PlaneData Array
 
         return {'FINISHED'}
     
@@ -137,7 +133,6 @@ class Reset_Mesh_Collection(bpy.types.Operator):
             for ImageValues in range(3):
                 ImageFilePaths.append(os.path.abspath("ImageFolder\\" + "View" + str(ImageValues) + plane_data.PlaneFilepath[plane_data.PlaneFilepath.rfind("."): ] ))
                 if path.exists(ImageFilePaths[ImageValues]): os.remove(ImageFilePaths[ImageValues]) # if we find that file we will delete it
-
             
             bpy.data.objects[plane_data.ImagePlaneName].select_set(True)# selects the image plane in the array 
             bpy.ops.object.delete(use_global=False, confirm=False)#deletes the image plane in the array 
@@ -148,8 +143,6 @@ class Reset_Mesh_Collection(bpy.types.Operator):
         collection = bpy.data.collections.get("Sketch_to_Mesh_Collection")
         if collection is not None: bpy.data.collections.remove(collection)
         return {'FINISHED'}
-
-
 
 class PlaceMesh(bpy.types.Operator):
     bl_idname = "wm.place_mesh"
