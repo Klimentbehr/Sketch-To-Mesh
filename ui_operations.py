@@ -12,7 +12,6 @@ GlobalPlaneDataArray : list[PlaneItem] = [] # this will eventually replace the t
 PlaneAdded : bool = False
 PlaneCreated : bool = False
 
-
 def draw_callback_px(self, context, message):
     font_id = 0
     blf.position(font_id, 15, 30, 0)

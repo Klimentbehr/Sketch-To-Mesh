@@ -20,7 +20,25 @@ class VIEW3D_PT_Sketch_To_Mesh_Panel(bpy.types.Panel):
     
     def draw(self, context):  layout = self.layout
 
+class DataBaseUIMenu(bpy.types.Panel):
+    bl_idname = "wm.database_ui_menu"
+    bl_label = "Database Menu"
+    bl_parent_id = "_PT_Sketch_To_Mesh_Main_Panel" 
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
 
+    def draw(self, context):    
+        layout = self.layout
+        row = layout.row()
+        if User.UserSignedIn == False :
+            row.operator("wm.database_register", text="Register User")
+            row = layout.row()
+            row.operator("wm.database_login", text="Login User")
+        else :
+            row.operator("wm.access_database", text="Access Database") 
+            row = layout.row() 
+            row.operator("wm.user_logout", text="Logout") # TODO: logout function in authentication
+            
 class VIEW3D_PT_Sketch_To_Mesh_Testing(bpy.types.Panel):  
     bl_label = "Testing"
     bl_idname = "_PT_Testing_Panel"
