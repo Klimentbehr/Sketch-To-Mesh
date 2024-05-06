@@ -45,7 +45,7 @@ def GenerateShapeEdges(radius:int, plane:PlaneItem, ColorToLookFor, CalculatedRa
     
     FinishedList =[]
     SizedEdgePoints, MulipliersValues, imageShape = GetPointsFromImage(imageDataClass.image, plane, imageDataClass.ImageShape[0], imageDataClass.ImageShape[1], radius)
-
+    
     imageDataClass.__setattr__('ImageShape', imageShape)
     imageDataClass.__setattr__('image', cv2.resize(imageDataClass.image, (imageDataClass.ImageShape[1], imageDataClass.ImageShape[0])))
 
