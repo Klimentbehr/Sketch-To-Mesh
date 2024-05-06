@@ -10,11 +10,10 @@ bl_info = {
     
 import bpy
 
-from .base_ui import VIEW3D_PT_Sketch_To_Mesh_Panel, VIEW3D_PT_Sketch_To_Mesh_MeshSettings_Panel, DataBaseUIMenu, VIEW3D_PT_Sketch_To_Mesh_Testing
-from .ui_operations import OBJECT_OT_add_plane_item, Reset_Input_Images, VIEW3D_PT_Sketch_To_Mesh_Views_FilePath_Panel, PlaceImageIn3D, PlaceMesh,  NotificationPopup, Reset_Mesh_Collection
+from .ui_operations import OBJECT_OT_add_plane_item, Reset_Input_Images, VIEW3D_PT_Sketch_To_Mesh_Views_FilePath_Panel, PlaceImageIn3D, PlaceMesh,  NotificationPopup, VIEW3D_PT_Sketch_To_Mesh_MeshSettings_Panel, Reset_Mesh_Collection
+from .testing_operations import DoImg,  ExportToDatabase#, StMTestImagePrep, StMTestSaveFileToDb, StMTestConnectionOperator, StMTestGetFileFromDbFromUserId, StMTestDeleteFileFromDbFromUserId,
 from .DatabaseUI import DataBaseLogin, DataBaseRegister, DocumentItem, DataBaseLogout,  DataBase_UIList, DeleteFromDatabase, AccessDatabase, AddToDatabase, ImportFromDataBase
-from .testing_operations import DoImg, StMTestImagePrep, StMTestSaveFileToDb, StMTestConnectionOperator, StMTestGetFileFromDbFromUserId, StMTestDeleteFileFromDbFromUserId, ExportToDatabase
-
+from .base_ui import VIEW3D_PT_Sketch_To_Mesh_Panel, DataBaseUIMenu#, VIEW3D_PT_Sketch_To_Mesh_Testing
 
 def register():
   
@@ -38,12 +37,13 @@ def register():
     bpy.utils.register_class(OBJECT_OT_add_plane_item)
     bpy.utils.register_class(Reset_Input_Images)
     bpy.utils.register_class(Reset_Mesh_Collection)
+
     bpy.utils.register_class(VIEW3D_PT_Sketch_To_Mesh_Panel)
     bpy.utils.register_class(VIEW3D_PT_Sketch_To_Mesh_Views_FilePath_Panel)
     bpy.utils.register_class(PlaceImageIn3D)
     bpy.utils.register_class(DoImg)
     bpy.utils.register_class(VIEW3D_PT_Sketch_To_Mesh_MeshSettings_Panel)
-    bpy.utils.register_class(VIEW3D_PT_Sketch_To_Mesh_Testing)
+    #bpy.utils.register_class(VIEW3D_PT_Sketch_To_Mesh_Testing)
     bpy.utils.register_class(NotificationPopup)
 
     # db
@@ -64,11 +64,11 @@ def register():
     bpy.utils.register_class(DataBaseUIMenu)
     bpy.utils.register_class(DataBaseRegister)
     bpy.utils.register_class(DataBaseLogin)
-    bpy.utils.register_class(StMTestImagePrep)  
-    bpy.utils.register_class(StMTestSaveFileToDb) 
-    bpy.utils.register_class(StMTestConnectionOperator) 
-    bpy.utils.register_class(StMTestGetFileFromDbFromUserId) 
-    bpy.utils.register_class(StMTestDeleteFileFromDbFromUserId) 
+    #bpy.utils.register_class(StMTestImagePrep)  
+    #bpy.utils.register_class(StMTestSaveFileToDb) 
+    #bpy.utils.register_class(StMTestConnectionOperator) 
+    #bpy.utils.register_class(StMTestGetFileFromDbFromUserId) 
+    #bpy.utils.register_class(StMTestDeleteFileFromDbFromUserId) 
     
 
 def unregister():
@@ -88,12 +88,13 @@ def unregister():
     bpy.utils.unregister_class(OBJECT_OT_add_plane_item)
     bpy.utils.unregister_class(Reset_Input_Images)
     bpy.utils.unregister_class(Reset_Mesh_Collection)
+    
     bpy.utils.unregister_class(VIEW3D_PT_Sketch_To_Mesh_Panel)
     bpy.utils.unregister_class(VIEW3D_PT_Sketch_To_Mesh_Views_FilePath_Panel)
     bpy.utils.unregister_class(PlaceImageIn3D)
     bpy.utils.unregister_class(DoImg)
     bpy.utils.unregister_class(VIEW3D_PT_Sketch_To_Mesh_MeshSettings_Panel)
-    bpy.utils.unregister_class(VIEW3D_PT_Sketch_To_Mesh_Testing)
+    #bpy.utils.unregister_class(VIEW3D_PT_Sketch_To_Mesh_Testing)
     bpy.utils.unregister_class(NotificationPopup)
 
     # db
@@ -115,11 +116,11 @@ def unregister():
     bpy.utils.unregister_class(DataBaseUIMenu)
     bpy.utils.unregister_class(DataBaseRegister)
     bpy.utils.unregister_class(DataBaseLogin)
-    bpy.utils.unregister_class(StMTestImagePrep)
-    bpy.utils.unregister_class(StMTestConnectionOperator)
-    bpy.utils.unregister_class(StMTestSaveFileToDb)
-    bpy.utils.unregister_class(StMTestGetFileFromDbFromUserId)
-    bpy.utils.unregister_class(StMTestDeleteFileFromDbFromUserId) 
+    #bpy.utils.unregister_class(StMTestImagePrep)
+    #bpy.utils.unregister_class(StMTestConnectionOperator)
+    #bpy.utils.unregister_class(StMTestSaveFileToDb)
+    #bpy.utils.unregister_class(StMTestGetFileFromDbFromUserId)
+    #bpy.utils.unregister_class(StMTestDeleteFileFromDbFromUserId) 
 
 if __name__ == "__main__":
     register()
