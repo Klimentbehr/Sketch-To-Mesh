@@ -437,11 +437,75 @@ def GenerateMeshEdgeData(EdgeList:dict, AdjacentPoint:AdjacentEdge, AdjacentEdge
             AdjacentDataForBlender.append((TAdjacentPoint, TAdjacentEdgePoints[iter]))
             iter += 1
 
+
+    # need our placements to know where to start our faces
+    AdjacentPointLocation = len(VertexList)
+    TAdjacentPointLocation= len(VertexList)+1
+
     #adds our adjacent points to the edgelist
     VertexList.append(AdjacentPoint3D); VertexList.append(TAdjacentPoint)
-    EdgeDataList = map_coordinates_to_indices(EdgeDataForBlender + AdjacentDataForBlender)
-    
+    CoordinateEdgedata = EdgeDataForBlender + AdjacentDataForBlender
+    EdgeDataList = map_coordinates_to_indices(CoordinateEdgedata)
+    AdjacentfaceList = RepackageFaceList(CreatFaceData(AdjacentPointLocation, EdgeDataList))
+    TAdjacentfaceList = RepackageFaceList(CreatFaceData(TAdjacentPointLocation, EdgeDataList))
+
+    for tuples in AdjacentfaceList: EdgeDataList.append(tuples)
+    for tuples in TAdjacentfaceList: EdgeDataList.append(tuples)
+
     return VertexList, EdgeDataList
+
+def RepackageFaceList(faceList):
+    FaceSetTupleList = []
+    FaceSetList = []
+
+    for sets in faceList: 
+        for pairs in sets: FaceSetTupleList.append(pairs[0]) 
+        FaceSetList.append(tuple(FaceSetTupleList))
+        FaceSetTupleList = []
+    return FaceSetList
+
+def CreatFaceData(AdjacentPointLocation, EdgeDataList):
+    NotDone = True
+    Currpoint = AdjacentPointLocation
+    KnownPairs = []
+    FacePairs = []
+
+    CurrentFaces = 0
+    StartingBool = True
+    LastPoint = False
+    Faces = {}
+
+    while NotDone:
+        for Pairs in EdgeDataList:
+            if Pairs[0] == Currpoint and Pairs not in KnownPairs:
+                FacePairs.append(Pairs)
+                Currpoint = Pairs[1]
+                CurrEdge = Pairs
+                break
+            elif Pairs == EdgeDataList[-1]: LastPoint = True
+
+
+        if ((AdjacentPointLocation, CurrEdge[0]) in EdgeDataList and (AdjacentPointLocation, CurrEdge[0]) not in KnownPairs) or LastPoint: #we know we got back to the orginalPoint
+            if LastPoint:
+                FacePairs.append((KnownPairs[0][1], KnownPairs[0][0]))
+                Faces[CurrentFaces] = FacePairs
+                CurrentFaces += 1
+            elif StartingBool == False:
+                FacePairs.pop(-1) # removes the last pair before saving hte list of known points
+                KnownPairs = KnownPairs + FacePairs
+                FacePairs.append((CurrEdge[0], AdjacentPointLocation))
+                Faces[CurrentFaces] = FacePairs
+                FacePairs = []
+                Currpoint = AdjacentPointLocation
+                CurrentFaces += 1
+                StartingBool = True
+            else: StartingBool = False
+        if CurrentFaces >= len(AdjacentPoint.AdjacentLine): NotDone = False
+
+    FaceList = []
+    for face in Faces: FaceList.append(Faces[face])
+    return FaceList
+
 
 def GetMidPoint(MeshStructure):
     estimateMidpoints = [] #This will hold the potential midpoints before they are averaged out
