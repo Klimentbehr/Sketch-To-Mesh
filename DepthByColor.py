@@ -26,6 +26,42 @@ class EdgeData:
         self.slope = GetSlope(Point, NextPoint) #gets the slope of each edge
         self.Yintercept = calucalateYIntercept(Point, self.slope )
 
+@dataclass
+class CameraPoint:
+    m_Coordinate:list#contains teh coordinate of the CameraPoint
+    m_CenterPoint:int # contains the point the camera will rotate around
+    m_MaxDst:int # contians the radius and Max dst away any cameraPoint can be
+    m_Axis:list # [X, Y, Z] the axis contians the rotations for each Axis
+
+    def __init__(self, MaxDst, CenterPoint, Axis):
+        self.m_CenterPoint = CenterPoint
+        self.m_MaxDst = MaxDst
+        self.m_Axis = Axis
+        self.m_Coordinate = [CenterPoint[0] + MaxDst, CenterPoint[1], CenterPoint[2]] #this will be the first point with (0,0,0) and will be (MaxDst, 0, 0)
+        self.m_Coordinate = ChangeCoordinate(self.m_MaxDst, self.m_Axis) # this will change the coordinate based on the axis
+
+    def ChangeAxis(self, NewAxis):
+        self.m_Axis = NewAxis
+        self.m_Coordinate = ChangeCoordinate(self.m_Coordinate, self.m_Axis)
+    
+    def CheckDstBetweenCoordinate(self, Coordinate):
+        distanceBetweenPoints = GetDistanceBetweenPoints3D(self.m_Coordinate, Coordinate)
+        return distanceBetweenPoints
+
+
+def ChangeCoordinate(MaxDst, Axis):
+    New_CoordXandY = CalculateRotation(MaxDst, Axis[0]) 
+    New_CoordYandZ = CalculateRotation(MaxDst, Axis[2])
+    return  [New_CoordXandY[0], New_CoordYandZ[0], New_CoordYandZ[1]]
+
+#CalculateRotation
+#Description
+#This function will calucalute the rotation of a point on a circle. It uses the 
+def CalculateRotation(MaxDst, angle): 
+    x=MaxDst * math.cos(angle)
+    y=MaxDst * math.cos(angle)
+    return [x, y]
+
 #GenerateShapeEdges
 #Description
 #This function create the edgedata used throughout the process of making the simplified mesh
