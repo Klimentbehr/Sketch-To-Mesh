@@ -343,8 +343,6 @@ def GetAverageOfSurroundingValues(EdgeDataList:EdgeData, oringalImage):
 #Returns
 #MeshStructure: the structure of the map. This dictionary has intergers as the keys and has the VErtices, Edges, and Faces 
 def CalculateZAxis(EdgeDataList:dict):
-    XList = []; YList = []; ZList = []
-    
     ZValueIter = 0
     AdjacentEdgeZValueReference = []
     for points in EdgeDataList:
@@ -355,8 +353,14 @@ def CalculateZAxis(EdgeDataList:dict):
         ZValueIter += 1
 
     PointsToNormalise, BlenderEdgeData = GenerateMeshEdgeData(EdgeDataList, AdjacentPoint, AdjacentEdgeZValueReference)
+    return CreateBlenderData(PointsToNormalise, BlenderEdgeData)
 
-    for points in PointsToNormalise: XList.append(points[0]); YList.append(points[1]); ZList.append(points[2])
+
+
+def CreateBlenderData(PointsToNormalize, BlenderEdgeData):
+    XList = []; YList = []; ZList = []
+
+    for points in PointsToNormalize: XList.append(points[0]); YList.append(points[1]); ZList.append(points[2])
     NormalisedXData = NormaliseData(XList); NormalisedYData = NormaliseData(YList); NormalisedZData= NormaliseData(ZList)
 
     FinalVertexPoints =[]
@@ -473,7 +477,6 @@ def GenerateMeshEdgeData(EdgeList:dict, AdjacentPoint:AdjacentEdge, AdjacentEdge
             AdjacentDataForBlender.append((TAdjacentPoint, TAdjacentEdgePoints[iter]))
             iter += 1
 
-
     # need our placements to know where to start our faces
     AdjacentPointLocation = len(VertexList)
     TAdjacentPointLocation= len(VertexList)+1
@@ -542,7 +545,6 @@ def CreatFaceData(AdjacentPointLocation, EdgeDataList):
     for face in Faces: FaceList.append(Faces[face])
     return FaceList
 
-
 def GetMidPoint(MeshStructure):
     estimateMidpoints = [] #This will hold the potential midpoints before they are averaged out
     furthestDistance = 0 #This will hold the furthest distance from one point for comparison
@@ -586,7 +588,6 @@ def TransposeMesh(Midpoint, Mesh):
 def GetDistanceBetweenPoints3D(point1:list, point2:list): #supporting function that just does the distance formula for 3d 
     return math.sqrt(((point2[0]-point1[0])**2) + ((point2[1]-point1[1])**2) + ((point2[2]-point1[2])**2))
 
-
 # Function to map a list of coordinate pairs to integer indices
 def map_coordinates_to_indices(user_sequence):
     point_index = {}  # This dictionary will map points to integers
@@ -611,3 +612,61 @@ def map_coordinates_to_indices(user_sequence):
         indexed_pairs.append((point_index[start], point_index[end]))
 
     return indexed_pairs
+
+def RecalulateVertices(VisibleVerts:list, VertsForSecondPerpesctive, VisbleEdgeDataList:list, Vertlist):
+    #we need the connections between each vert and we need the verts that are not seen to be removed
+    #we need to consider how many point are connected to each vert
+    #We also need to consider how close the points are to the verts in the SecondPerpective
+    
+    VertToEdgeForOringinal = VertAsIndicator(Vertlist, VisibleVerts)
+    VertToEdgeForSecondImage = VertAsIndicator(Vertlist, VertsForSecondPerpesctive)
+    SimilarityList = []
+    SimilartyDict = {}
+    iter = 0
+    for vertconnections in VertToEdgeForOringinal:
+        for vertConnectForSecond in VertToEdgeForSecondImage:
+            if len(VertToEdgeForOringinal[vertconnections]) == len(VertToEdgeForSecondImage[vertConnectForSecond]): SimilarityList.append(vertConnectForSecond)
+        SimilartyDict[vertconnections] = SimilarityList
+        iter += 1
+
+    #Now we know which point have the same amount of vertices we can see which ones are teh closest
+    NewVertList = []
+    for Connections in SimilartyDict:
+            ClosestPoint = GetClosestPoint3D(Connections, SimilarityList[Connections])
+            NewVertList.append(GetAverageOfAllCoordinateValuesInList([ClosestPoint, Connections]))
+
+    iter =0
+    for iterator in range(len(NewVertList)):
+        if iterator in VertToEdgeForOringinal:
+            Vertlist[iterator] = NewVertList[iter]
+            iter += 1
+
+    return Vertlist
+        
+def GetClosestPoint3D(Target, PointList):
+    Distances = {}
+    for points in PointList: Distances[GetDistanceBetweenPoints3D(Target, points)] = points
+    return Distances[min(Distances)]
+
+        
+def VertAsIndicator(FullPointlist, ComparingList, VisbleEdgeDataList):
+    VertToEdge = []
+    VertConnections = {}
+    iter = 0
+    #we will get the indicator for the point within the edgelist
+    for Vertpoints in FullPointlist:
+        for points in ComparingList:
+            if points == Vertpoints:
+                VertToEdge.append(iter) #this is the index of the vert in the edgeList
+                break
+        iter +=1
+
+    #We get the verts and all of there connections in a dictionary
+    #with this we know how many verts are connected to each point
+    for edges in VisbleEdgeDataList:
+        VertConnectionList=[]
+        for vert in VertToEdge:
+            if edges[0] == vert:
+                VertConnectionList.append(edges[1])
+        VertConnections[edges[0]] = VertConnectionList# we assign the connections to the vert
+    return VertConnections

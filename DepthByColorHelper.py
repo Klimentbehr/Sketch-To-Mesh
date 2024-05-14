@@ -568,5 +568,3 @@ def GetClosetPointsToValue(PointList:list, ValueList:list):
                 ActivePoints.append(points)
     ActivePoints = GetUniquePoints(ActivePoints)
     return ActivePoints
-
-
