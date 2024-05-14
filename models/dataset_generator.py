@@ -3,28 +3,28 @@ import os
 import math
 import random
 
-# Output directories
+# sets up where its going to be saved,and makes sure it exists a train,validation, and test folder inside of it.
 output_base_dir = r'C:\Users\RAFAEL MUITO ZIKA\Desktop\Test Images\datasets'
 train_dir = os.path.join(output_base_dir, 'train')
 validation_dir = os.path.join(output_base_dir, 'validation')
 test_dir = os.path.join(output_base_dir, 'test')
 
-# Ensure directories exist
+# check to see if the folders exist.
 os.makedirs(train_dir, exist_ok=True)
 os.makedirs(validation_dir, exist_ok=True)
 os.makedirs(test_dir, exist_ok=True)
 
-# Clear everything from the scene beforehand
+# clear the scene before next render
 def clear_scene():
     bpy.ops.object.select_all(action='DESELECT')
     bpy.ops.object.select_by_type(type='MESH')
     bpy.ops.object.delete()
 
-# Function to add a pyramid
+# there is no pyramid preset, so we have to edit a cone so it looks like a pyramid.
 def add_pyramid(size=1, location=(0, 0, 0)):
     bpy.ops.mesh.primitive_cone_add(vertices=4, radius1=size, depth=size, location=location)
 
-# List of objects to create
+# list of objects to create
 def create_geometric_objects():
     sizes = [1, 2, 3]
     shapes_info = [
@@ -44,7 +44,7 @@ def create_geometric_objects():
             render_object(obj)
             bpy.data.objects.remove(obj)  # Important: delete the object after rendering
 
-# Camera and rendering settings
+# camera and rendering settings
 scene = bpy.context.scene
 scene.render.resolution_x = 1080
 scene.render.resolution_y = 1080
@@ -54,19 +54,19 @@ scene.render.engine = 'CYCLES'
 cam = scene.camera
 light_settings = [('POINT', 1000), ('SUN', 1000)]
 
-# Generate camera angles
+# generate random camera angles (within range)
 def generate_camera_angles():
     return [(math.radians(i * 360 / 10), math.radians(30)) for i in range(10)]
 
 camera_angles = generate_camera_angles()
 
-# Point camera to object
+# points camera to object, very important lol
 def point_camera_to_object(obj):
     direction = obj.location - cam.location
     rot_quat = direction.to_track_quat('-Z', 'Y')
     cam.rotation_euler = rot_quat.to_euler()
 
-# Rendering function
+# rendering function
 def render_object(obj):
     for angle in camera_angles:
         cam.location.x = obj.location.x + 10 * math.cos(angle[1]) * math.cos(angle[0])
@@ -91,6 +91,6 @@ def render_object(obj):
             bpy.data.objects.remove(light_object)
             bpy.data.lights.remove(light_data)
 
-# Clear the scene and create objects
+# clear the scene and create objects
 clear_scene()
 create_geometric_objects()
