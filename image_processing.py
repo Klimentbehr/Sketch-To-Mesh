@@ -11,6 +11,13 @@ class PlaneItem:
     PlaneRotation = bpy.props.IntProperty(name="Rotation", default=0)
     ImagePlaneName: str
     ImagePlaneFilePath: str
+    top = (0,90,0)
+    bottom = (0,270,0)
+    front = (0,0,0)
+    sideR = (90,0,0)
+    back = (180,0,0)
+    sideL = (270,0,0)
+    currFace = front
     
     def __init__(self, filepath ,rotation):
         self.PlaneFilepath = filepath
