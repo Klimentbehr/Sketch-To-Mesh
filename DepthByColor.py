@@ -2,7 +2,7 @@ import cv2
 import math
 import bpy
 from .image_processing import PlaneItem, mark_corners, EditPicture, SaveImage
-from .DepthByColorHelper import AdjacentEdge, ImageDataClass, GetSlope, calucalateYIntercept, GetUniquePoints, CheckForInsideLines, CreateSolidLine, GetDistanceBetweenPoints, ColorCheck, GetFilledCircle, GetAverageOfAllCoordinateValuesInList, GetAverageDstBetweenPoints, getCircle, GetClosetPointsToValue, GetUniquePoints, GetPointsWithinRadius
+from .DepthByColorHelper import AdjacentEdge, ImageDataClass, GetSlope, calucalateYIntercept, GetUniquePoints, CheckForInsideLines, CreateSolidLine, GetDistanceBetweenPoints, ColorCheck, GetFilledCircle, GetAverageOfAllCoordinateValuesInList, GetAverageDstBetweenPoints, getCircle, GetClosetPointsToValue, GetUniquePoints
 from threading import Thread, Lock
 from dataclasses import dataclass
 
@@ -28,6 +28,42 @@ class EdgeData:
         self.slope = GetSlope(Point, NextPoint) #gets the slope of each edge
         self.Yintercept = calucalateYIntercept(Point, self.slope )
 
+@dataclass
+class CameraPoint:
+    m_Coordinate:list#contains teh coordinate of the CameraPoint
+    m_CenterPoint:int # contains the point the camera will rotate around
+    m_MaxDst:int # contians the radius and Max dst away any cameraPoint can be
+    m_Axis:list # [X, Y, Z] the axis contians the rotations for each Axis
+
+    def __init__(self, MaxDst, CenterPoint, Axis):
+        self.m_CenterPoint = CenterPoint
+        self.m_MaxDst = MaxDst
+        self.m_Axis = Axis
+        self.m_Coordinate = [CenterPoint[0] + MaxDst, CenterPoint[1], CenterPoint[2]] #this will be the first point with (0,0,0) and will be (MaxDst, 0, 0)
+        self.m_Coordinate = ChangeCoordinate(self.m_MaxDst, self.m_Axis) # this will change the coordinate based on the axis
+
+    def ChangeAxis(self, NewAxis):
+        self.m_Axis = NewAxis
+        self.m_Coordinate = ChangeCoordinate(self.m_Coordinate, self.m_Axis)
+    
+    def CheckDstBetweenCoordinate(self, Coordinate):
+        distanceBetweenPoints = GetDistanceBetweenPoints3D(self.m_Coordinate, Coordinate)
+        return distanceBetweenPoints
+
+
+def ChangeCoordinate(MaxDst, Axis):
+    New_CoordXandY = CalculateRotation(MaxDst, Axis[0]) 
+    New_CoordYandZ = CalculateRotation(MaxDst, Axis[2])
+    return  [New_CoordXandY[0], New_CoordYandZ[0], New_CoordYandZ[1]]
+
+#CalculateRotation
+#Description
+#This function will calucalute the rotation of a point on a circle. It uses the 
+def CalculateRotation(MaxDst, angle): 
+    x=MaxDst * math.cos(angle)
+    y=MaxDst * math.cos(angle)
+    return [x, y]
+
 #GenerateShapeEdges
 #Description
 #This function create the edgedata used throughout the process of making the simplified mesh
@@ -42,29 +78,21 @@ class EdgeData:
 
 #Returns
 #outputlist: This is the MeshStructure of the simplified mesh
-def GenerateShapeEdges(radius:int, plane:PlaneItem, ColorToLookFor, CalculatedRadius = False):
+def GenerateShapeEdges(radius:int, plane:PlaneItem, ColorToLookFor):
     imageDataClass = ImageDataClass(radius, plane, ColorToLookFor)
-    SizedEdgePoints, MulipliersValues, imageShape = GetPointsFromImage(imageDataClass.image, plane)
+
+    
+    FinishedList =[]
+    SizedEdgePoints, MulipliersValues, imageShape = GetPointsFromImage(imageDataClass.image, plane, imageDataClass.ImageShape[0], imageDataClass.ImageShape[1], radius)
     imageDataClass.__setattr__('ImageShape', imageShape)
     imageDataClass.__setattr__('image', cv2.resize(imageDataClass.image, (imageDataClass.ImageShape[1], imageDataClass.ImageShape[0])))
+    for points in SizedEdgePoints: FinishedList.append((round(points[0] / MulipliersValues[0]), round(points[1] / MulipliersValues[1])))
 
-    #for points in SizedEdgePoints: FinishedList.append((round(points[0] / MulipliersValues[0]), round(points[1] / MulipliersValues[1])))
-    imageDataClass.__setattr__('radius', radius)
-
-    for points in SizedEdgePoints:
+    for points in FinishedList:
         EditPicture((0,0,0), points, imageDataClass.image)
         SaveImage(imageDataClass.image, plane.ImagePlaneFilePath, "View0")
-
-
-    # FinishedDict = {key: 0 for key in EdgeDataList}
-
-    # AdjacentPoint:AdjacentEdge = CheckForInsideLines(imageDataClass, FinishedDict)
-    # for adjacentLines in AdjacentPoint.AdjacentLine: 
-    #     for points in AdjacentPoint.AdjacentLine[adjacentLines]: #adds on the extras lines 
-    #         EditPicture(imageDataClass.Color, points, imageDataClass.image)
-    #         SaveImage(imageDataClass.image, imageDataClass.plane.ImagePlaneFilePath, "View0")
  
-    EdgeDataList = CreateEdgeData(SizedEdgePoints, imageDataClass)    
+    EdgeDataList = CreateEdgeData(FinishedList, imageDataClass)
     EdgeDataList = CalculateLocationsOfAvaliblePixelsAroundPoint(EdgeDataList, imageDataClass)
     outputlist = CycleThroughEdgePointsForColor(EdgeDataList, imageDataClass)
     return outputlist
@@ -80,36 +108,34 @@ def GenerateShapeEdges(radius:int, plane:PlaneItem, ColorToLookFor, CalculatedRa
 #ImageColumn: This is the Lebngth of the image
 
 #Returns
-#This function returns the list of edgePoint coordinates and The Sizers for the row and column of the image
-def GetPointsFromImage(image, plane:PlaneItem):
+#This function returns the list of edgePoint coordinates, The Sizers for the row and column of the image, and the size of the oringinal image
+def GetPointsFromImage(image, plane:PlaneItem, ImageRow, ImageColumn, radius):
     CvEdgePointArray, imageShape = mark_corners(plane.PlaneFilepath)
-
-    XScalar = (200 /imageShape[0] ) 
-    YScalar = (200 / imageShape[1])
-
+    EdgeImageRow = imageShape[0] -1
+    EdgeImageColumn = imageShape[1] -1
+    EnlargedImageRowMultiplier = ImageRow / EdgeImageRow
+    EnlargedImageColumnMultiplier = ImageColumn / EdgeImageColumn
     EdgePointArray = []
     EdgepointsForCircle = []
     EdgePoints=[]
 
     for point in CvEdgePointArray:
-        EnlargedRow = round(point[0] * XScalar)
-        EnlargedColummn = round(point[1] * YScalar)
+        EnlargedRow = round(point[0] * EnlargedImageRowMultiplier)
+        EnlargedColummn = round(point[1] * EnlargedImageColumnMultiplier)
         EdgePointArray.append((EnlargedRow, EnlargedColummn))
         
     AveragePoint = GetAverageOfAllCoordinateValuesInList(EdgePointArray)
     AveragePoint = ((round(AveragePoint[0]), round(AveragePoint[1])))
 
     AverageValueTODstCircle = GetAverageDstBetweenPoints(EdgePointArray, AveragePoint)
-    CirclePoints = getCircle(AveragePoint, image, AverageValueTODstCircle + 300, True, True)
-
-    for CircleEdges in CirclePoints: EdgepointsForCircle = EdgepointsForCircle + GetClosetPointsToValue(EdgePointArray, CircleEdges)#CirclePoints in a list of lists so we searchthrough each list to see if there are any edges
+    CirclePoints = getCircle(AveragePoint, image, AverageValueTODstCircle+round(EnlargedRow), True)
+    for CircleEdges in CirclePoints: #CirclePoints in a list of lists so we searchthrough each list to see if there are any edges
+        EdgepointsForCircle = EdgepointsForCircle + GetClosetPointsToValue(EdgePointArray, CircleEdges)
     EdgePoints = OrderPoints(GetUniquePoints(EdgepointsForCircle))
     EdgePoints.remove(EdgePoints[-1])
-
-    EdgePoints = GetPointsWithinRadius(EdgePoints, 20)
-
-    return EdgePoints, (XScalar, YScalar), (200, 200)
+    return EdgePoints, (EnlargedImageRowMultiplier, EnlargedImageColumnMultiplier), (imageShape[0], imageShape[1])
  
+
 def OrderPoints(circle_points):
     ordered_list = []
     CurrPoint = circle_points[0]
@@ -163,8 +189,7 @@ def CreateEdgeData(FinishedList:list, imageDataClass:ImageDataClass):
         SaveImage(imageDataClass.image, imageDataClass.plane.ImagePlaneFilePath, "View0")
         #mutex.release()
         CurrEdgePoint.__setattr__('LinePoints', Linedata)
-        #for threads in ThreadList:threads.join()  
-          
+        #for threads in ThreadList:threads.join()    
     global AdjacentPoint
     AdjacentPoint = CheckForInsideLines(imageDataClass, EdgeDataList)
     for adjacentLines in AdjacentPoint.AdjacentLine: 
@@ -283,7 +308,6 @@ def CalculateCollision(pointWeCheck:list, LinePointDictionary:dict, imageDataCla
 #EdgeDataList: Returns the updated Edgedata list
 def CycleThroughEdgePointsForColor(EdgeDataList, imageDataClass:ImageDataClass):
     OringalImage= cv2.imread(imageDataClass.plane.PlaneFilepath)
-    OringalImage = cv2.resize(OringalImage, (200, 200))
     AverageColorList = []
 
     for edges in EdgeDataList: 
@@ -322,81 +346,29 @@ def GetAverageOfSurroundingValues(EdgeDataList:EdgeData, oringalImage):
 #Returns
 #MeshStructure: the structure of the map. This dictionary has intergers as the keys and has the VErtices, Edges, and Faces 
 def CalculateZAxis(EdgeDataList:dict):
-    ZValuesList = []
-    XList = []
-    YList = []
-    FinalEdgeData = []
-
-    AdjacentEdgeZValueReference = []
+    XList = []; YList = []; ZList = []
+    
     ZValueIter = 0
+    AdjacentEdgeZValueReference = []
     for points in EdgeDataList:
         edgepoint:EdgeData = EdgeDataList[points]
         edgepoint.__setattr__('ZValue', ((round(EdgeDataList[points].AverageColor[0]) + round(EdgeDataList[points].AverageColor[1]) + round(EdgeDataList[points].AverageColor[2])) / 3))
-        ZValuesList.append(EdgeDataList[points].ZValue)
+
         if AdjacentPoint.AdjacentLine.get(points): AdjacentEdgeZValueReference.append(ZValueIter)
-        XList.append(points[0])
-        YList.append(points[1])
-        ZValueIter = ZValueIter + 1
+        ZValueIter += 1
 
-    XList.append(AdjacentPoint.Coordinates[0])
-    YList.append(AdjacentPoint.Coordinates[1])
+    PointsToNormalise, BlenderEdgeData = GenerateMeshEdgeData(EdgeDataList, AdjacentPoint, AdjacentEdgeZValueReference)
 
-    NormalisedXData = NormaliseData(XList)
-    NormalisedYData = NormaliseData(YList)
-    NormalisedZData= NormaliseData(ZValuesList) #Normalises the Z data so the values match the values in the orginal function
+    for points in PointsToNormalise: XList.append(points[0]); YList.append(points[1]); ZList.append(points[2])
+    NormalisedXData = NormaliseData(XList); NormalisedYData = NormaliseData(YList); NormalisedZData= NormaliseData(ZList)
 
-    AdjacentPoint.__setattr__('Coordinates', (NormalisedXData[-1], NormalisedYData[-1])) #grabs the normalise X and Y for the adjacent points
-    iter = 0
-    for ZData in NormalisedZData:
-        FinalEdgeData.append((NormalisedXData[iter], NormalisedYData[iter], ZData))
-        iter += 1
-
-    iter = 0
-    ZAverage = 0
-    for points in FinalEdgeData:
-        if iter in AdjacentEdgeZValueReference: ZAverage += ZData
-        iter += 1
-        ZAverage /= AdjacentEdgeZValueReference.__len__()
-
-    TemptFinalEdgeData = FinalEdgeData.copy()
-    BaseAdjacentPoint = (AdjacentPoint.Coordinates[0], AdjacentPoint.Coordinates[1], ZAverage) #holds the adjacent point
-    TemptFinalEdgeData.append(BaseAdjacentPoint)
-    meshMidpoint = GetMidPoint(TemptFinalEdgeData) #retrieves the midpoint from current edge data
-    transposedMesh = TransposeMesh(meshMidpoint, TemptFinalEdgeData) #transposes the matrix so that that points are generated that mirror the current 3d mesh
-    TransposedAdjacentPoint = transposedMesh[-1] #holds the transposed adjacent 
-    transposedMesh.remove(TransposedAdjacentPoint) 
-    
-    iter = 0
-    MergedTransposedList = []
-    for tpoints in transposedMesh:
-        CurrSmallestDstBetweenPoints = 1000000000
-        closestPoint = (0,0,0)
-        for points in FinalEdgeData:
-            DstBetweenPoints = GetDistanceBetweenPoints((tpoints[0], tpoints[1]), (points[0], points[1]))
-            if DstBetweenPoints < CurrSmallestDstBetweenPoints: 
-                if len(MergedTransposedList) == 0:
-                    CurrSmallestDstBetweenPoints = DstBetweenPoints
-                    closestPoint = points
-                else:
-                    if MergedTransposedList[-1][0] == tpoints: continue
-                    else:
-                        CurrSmallestDstBetweenPoints = DstBetweenPoints
-                        closestPoint = points
-        MergedTransposedList.append(GetAverageOfAllCoordinateValuesInList([tpoints, closestPoint], True))
-        iter += 1
-    
-    iter = 0
-    AdjacentEdgeList = []
-    for points in MergedTransposedList:
-        if iter in AdjacentEdgeZValueReference: AdjacentEdgeList.append((len(NormalisedZData), iter))
-        else: AdjacentEdgeList.append((len(NormalisedZData)+1, iter))
-        iter += 1
-
-    MeshStructure = GenerateEdges(MergedTransposedList, "BlenderPoints")
-    MeshStructure[0].append((AdjacentPoint.Coordinates[0], AdjacentPoint.Coordinates[1], ZAverage)) #adds the adjacentPoint not transposed
-    MeshStructure[0].append((TransposedAdjacentPoint)) #adds the transposed adjacent point
-    MeshStructure[0].append(meshMidpoint) #adds the midpoint
-    MeshStructure[1] = MeshStructure[1] + AdjacentEdgeList #ands the lines connecting the adjacent points
+    FinalVertexPoints =[]
+    for pointvalue in range(len(XList)): FinalVertexPoints.append((NormalisedXData[pointvalue], NormalisedYData[pointvalue], NormalisedZData[pointvalue]))
+   
+    MeshStructure = {}
+    MeshStructure[0] = FinalVertexPoints
+    MeshStructure[1] = BlenderEdgeData
+    MeshStructure[2] = []
     return MeshStructure
 
 #NormaliseData
@@ -471,11 +443,114 @@ def GenerateEdges(VertList:list, request:str, VertList2:list = []):
     MeshStructure[2] = []
     return MeshStructure
 
+def GenerateMeshEdgeData(EdgeList:dict, AdjacentPoint:AdjacentEdge, AdjacentEdgeZValueReference:list):
+    VertexList = []
+    #We need the orginal coordinates to reference the EdgeDataList
+    for points in EdgeList:
+        point:EdgeData = EdgeList[points]
+        Currpoint = (point.Point[0], point.Point[1], round(point.ZValue))
+        VertexList.append(Currpoint)
+
+    iter = 0
+    AdjacentZValue = 0
+    EdgeDataForBlender = []
+    TAdjacentEdgePoints =[]
+    for Edges in EdgeList:
+        point:EdgeData = EdgeList[Edges]
+        #we get the point we are currently on and the the next point in the edgelist
+        EdgeDataForBlender.append(((point.Point[0], point.Point[1], round(point.ZValue)) , (point.NextPoint[0], point.NextPoint[1], round(EdgeList[point.NextPoint].ZValue))))
+        #we check if any of the values are connected to the adjacent point
+        if iter in AdjacentEdgeZValueReference: AdjacentZValue += point.ZValue
+        else: TAdjacentEdgePoints.append((point.Point[0], point.Point[1], round(point.ZValue)) )
+        iter += 1
+
+    AdjacentPoint3D = (AdjacentPoint.Coordinates[0], AdjacentPoint.Coordinates[1], AdjacentZValue) #We store the Adjacent in a varible for easier use
+    AdjacentZValue = round(AdjacentZValue/ len(AdjacentEdgeZValueReference))# we get the Z value of the adjacent point by getting the average of the Z values that are connected to the point 
+    TAdjacentPoint = ((AdjacentPoint.Coordinates[0], AdjacentPoint.Coordinates[1], (-1* AdjacentZValue)))
+
+    AdjacentDataForBlender = []
+    iter = 0
+    for adjacentEdges in AdjacentPoint.AdjacentLine:
+            EdgePoint3D = (EdgeList[adjacentEdges].Point[0], EdgeList[adjacentEdges].Point[1], round(EdgeList[adjacentEdges].ZValue))
+            AdjacentDataForBlender.append((AdjacentPoint3D, EdgePoint3D))
+            AdjacentDataForBlender.append((TAdjacentPoint, TAdjacentEdgePoints[iter]))
+            iter += 1
+
+
+    # need our placements to know where to start our faces
+    AdjacentPointLocation = len(VertexList)
+    TAdjacentPointLocation= len(VertexList)+1
+
+    #adds our adjacent points to the edgelist
+    VertexList.append(AdjacentPoint3D); VertexList.append(TAdjacentPoint)
+    CoordinateEdgedata = EdgeDataForBlender + AdjacentDataForBlender
+    EdgeDataList = map_coordinates_to_indices(CoordinateEdgedata)
+    AdjacentfaceList = RepackageFaceList(CreatFaceData(AdjacentPointLocation, EdgeDataList))
+    TAdjacentfaceList = RepackageFaceList(CreatFaceData(TAdjacentPointLocation, EdgeDataList))
+
+    for tuples in AdjacentfaceList: EdgeDataList.append(tuples)
+    for tuples in TAdjacentfaceList: EdgeDataList.append(tuples)
+
+    return VertexList, EdgeDataList
+
+def RepackageFaceList(faceList):
+    FaceSetTupleList = []
+    FaceSetList = []
+
+    for sets in faceList: 
+        for pairs in sets: FaceSetTupleList.append(pairs[0]) 
+        FaceSetList.append(tuple(FaceSetTupleList))
+        FaceSetTupleList = []
+    return FaceSetList
+
+def CreatFaceData(AdjacentPointLocation, EdgeDataList):
+    NotDone = True
+    Currpoint = AdjacentPointLocation
+    KnownPairs = []
+    FacePairs = []
+
+    CurrentFaces = 0
+    StartingBool = True
+    LastPoint = False
+    Faces = {}
+
+    while NotDone:
+        for Pairs in EdgeDataList:
+            if Pairs[0] == Currpoint and Pairs not in KnownPairs:
+                FacePairs.append(Pairs)
+                Currpoint = Pairs[1]
+                CurrEdge = Pairs
+                break
+            elif Pairs == EdgeDataList[-1]: LastPoint = True
+
+
+        if ((AdjacentPointLocation, CurrEdge[0]) in EdgeDataList and (AdjacentPointLocation, CurrEdge[0]) not in KnownPairs) or LastPoint: #we know we got back to the orginalPoint
+            if LastPoint:
+                FacePairs.append((KnownPairs[0][1], KnownPairs[0][0]))
+                Faces[CurrentFaces] = FacePairs
+                CurrentFaces += 1
+            elif StartingBool == False:
+                FacePairs.pop(-1) # removes the last pair before saving hte list of known points
+                KnownPairs = KnownPairs + FacePairs
+                FacePairs.append((CurrEdge[0], AdjacentPointLocation))
+                Faces[CurrentFaces] = FacePairs
+                FacePairs = []
+                Currpoint = AdjacentPointLocation
+                CurrentFaces += 1
+                StartingBool = True
+            else: StartingBool = False
+        if CurrentFaces >= len(AdjacentPoint.AdjacentLine): NotDone = False
+
+    FaceList = []
+    for face in Faces: FaceList.append(Faces[face])
+    return FaceList
+
+
 def GetMidPoint(MeshStructure):
     estimateMidpoints = [] #This will hold the potential midpoints before they are averaged out
     furthestDistance = 0 #This will hold the furthest distance from one point for comparison
+    tempPoint = [1, 2, 3] #This will hold a temporary point for whatever point we need
     for point1 in MeshStructure:
-        tempPoint = list(point1) #This will hold a temporary point for whatever point we need
         for point2 in MeshStructure:
             if (point1 ==  point2): continue #if you are comparing the same point just continue on and ignore 
             else: 
@@ -514,9 +589,35 @@ def TransposeMesh(Midpoint, Mesh):
 def GetDistanceBetweenPoints3D(point1:list, point2:list): #supporting function that just does the distance formula for 3d 
     return math.sqrt(((point2[0]-point1[0])**2) + ((point2[1]-point1[1])**2) + ((point2[2]-point1[2])**2))
 
+# Function to map a list of coordinate pairs to integer indices
+def map_coordinates_to_indices(user_sequence):
+    point_index = {}  # This dictionary will map points to integers
+    index = 0
+    indexed_pairs = []
+
+    for pair in user_sequence:
+        # Unpack the pair for clarity
+        start, end = pair
+        
+        # Check if the start coordinate is new, if so, add to the point_index
+        if start not in point_index:
+            point_index[start] = index
+            index += 1
+            
+        # Check if the end coordinate is new, if so, add to the point_index
+        if end not in point_index:
+            point_index[end] = index
+            index += 1
+
+        # Append the index pair to the output list
+        indexed_pairs.append((point_index[start], point_index[end]))
+
+    return indexed_pairs
+  
 def ResetNormals(): #This function will reset the normals of the mesh once it has been generated
     obj = bpy.context.active_object
     bpy.ops.object.mode_set(mode='EDIT')
     bpy.ops.mesh.select_all(action='SELECT')
     bpy.ops.mesh.normals_make_consistent(inside=False)
     bpy.ops.object.mode_set(mode='OBJECT')
+
