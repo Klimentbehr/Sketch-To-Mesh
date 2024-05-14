@@ -3,36 +3,48 @@ import os
 import math
 import random
 
-output_dir = r'C:\Users\RAFAEL MUITO ZIKA\Desktop\Test Images\datsets'
-os.makedirs(output_dir, exist_ok=True)
+# Output directories
+output_base_dir = r'C:\Users\RAFAEL MUITO ZIKA\Desktop\Test Images\datasets'
+train_dir = os.path.join(output_base_dir, 'train')
+validation_dir = os.path.join(output_base_dir, 'validation')
+test_dir = os.path.join(output_base_dir, 'test')
 
-# i clear everything from the scene beforehand. when you open blender there is a default cube
+# Ensure directories exist
+os.makedirs(train_dir, exist_ok=True)
+os.makedirs(validation_dir, exist_ok=True)
+os.makedirs(test_dir, exist_ok=True)
+
+# Clear everything from the scene beforehand
 def clear_scene():
     bpy.ops.object.select_all(action='DESELECT')
     bpy.ops.object.select_by_type(type='MESH')
     bpy.ops.object.delete()
 
-# list of objects i want to be creating.
+# Function to add a pyramid
+def add_pyramid(size=1, location=(0, 0, 0)):
+    bpy.ops.mesh.primitive_cone_add(vertices=4, radius1=size, depth=size, location=location)
+
+# List of objects to create
 def create_geometric_objects():
     sizes = [1, 2, 3]
     shapes_info = [
-        {'func': bpy.ops.mesh.primitive_cube_add, 'param': 'size'},
-        {'func': bpy.ops.mesh.primitive_uv_sphere_add, 'param': 'radius'},
-        {'func': bpy.ops.mesh.primitive_cone_add, 'param': 'radius1'},
-        {'func': bpy.ops.mesh.primitive_cylinder_add, 'param': 'radius'},
-        {'func': bpy.ops.mesh.primitive_pyramid_add, 'param': 'size'}
+        {'func': bpy.ops.mesh.primitive_cube_add, 'param': 'size', 'name': 'Cube'},
+        {'func': bpy.ops.mesh.primitive_uv_sphere_add, 'param': 'radius', 'name': 'Sphere'},
+        {'func': bpy.ops.mesh.primitive_cone_add, 'param': 'radius1', 'name': 'Cone'},
+        {'func': bpy.ops.mesh.primitive_cylinder_add, 'param': 'radius', 'name': 'Cylinder'},
+        {'func': add_pyramid, 'param': 'size', 'name': 'Pyramid'}
     ]
     
     for shape_info in shapes_info:
         for size in sizes:
-            kwargs = {shape_info['param']: size, 'enter_editmode': False, 'location': (0, 0, 0)}
+            kwargs = {shape_info['param']: size, 'location': (0, 0, 0)}
             shape_info['func'](**kwargs)
             obj = bpy.context.active_object
-            obj.name = f"{obj.type}_{size}"
+            obj.name = f"{shape_info['name']}_{size}"
             render_object(obj)
-            bpy.data.objects.remove(obj)  # this is simportant. after i render i need to delete the object so i add another one.
+            bpy.data.objects.remove(obj)  # Important: delete the object after rendering
 
-# camera and rendering settings
+# Camera and rendering settings
 scene = bpy.context.scene
 scene.render.resolution_x = 1080
 scene.render.resolution_y = 1080
@@ -42,23 +54,19 @@ scene.render.engine = 'CYCLES'
 cam = scene.camera
 light_settings = [('POINT', 1000), ('SUN', 1000)]
 
-# generate camera angles
-# this is to create variance between the images. had to research a bit
+# Generate camera angles
 def generate_camera_angles():
-    return [(math.radians(i*360/10), math.radians(30)) for i in range(10)]
+    return [(math.radians(i * 360 / 10), math.radians(30)) for i in range(10)]
 
 camera_angles = generate_camera_angles()
 
-# function to point camera to object
-# found this somewhere in the internet but i need the camera to be looking directly at the cube. maybe i will add some variance to this, like different
-# camera positions? i am currently only kinda rotating the camera, but not exploring the x and y 
+# Point camera to object
 def point_camera_to_object(obj):
     direction = obj.location - cam.location
     rot_quat = direction.to_track_quat('-Z', 'Y')
-    cam.rotation_euler = rot_quat.to_euler() # what the fuck is this
+    cam.rotation_euler = rot_quat.to_euler()
 
-# rendering function 
-# basically saving the name of the  object, the angle of the camera, the type of light variance and itensity
+# Rendering function
 def render_object(obj):
     for angle in camera_angles:
         cam.location.x = obj.location.x + 10 * math.cos(angle[1]) * math.cos(angle[0])
@@ -72,7 +80,10 @@ def render_object(obj):
             scene.collection.objects.link(light_object)
             light_object.location = (5, 5, 5)
             light_data.energy = intensity
-            
+
+            # Determine which dataset split to use
+            split = random.choices(['train', 'validation', 'test'], [0.8, 0.1, 0.1])[0]
+            output_dir = os.path.join(output_base_dir, split)
             filename = f"{obj.name}_angle_{math.degrees(angle[0]):.2f}_{math.degrees(angle[1]):.2f}_{light_type}_{intensity}.png"
             scene.render.filepath = os.path.join(output_dir, filename)
             bpy.ops.render.render(write_still=True)
@@ -80,5 +91,6 @@ def render_object(obj):
             bpy.data.objects.remove(light_object)
             bpy.data.lights.remove(light_data)
 
+# Clear the scene and create objects
 clear_scene()
 create_geometric_objects()
