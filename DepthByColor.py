@@ -1,5 +1,6 @@
 import cv2
 import math
+import bpy
 from .image_processing import PlaneItem, mark_corners, EditPicture, SaveImage
 from .DepthByColorHelper import AdjacentEdge, ImageDataClass, GetSlope, calucalateYIntercept, GetUniquePoints, CheckForInsideLines, CreateSolidLine, GetDistanceBetweenPoints, ColorCheck, GetFilledCircle, GetAverageOfAllCoordinateValuesInList, GetAverageDstBetweenPoints, getCircle, GetClosetPointsToValue, GetUniquePoints, GetPointsWithinRadius
 from threading import Thread, Lock
@@ -7,6 +8,7 @@ from dataclasses import dataclass
 
 mutex = Lock()
 meshMidpoint = None
+visiblePoints = 0
 
 @dataclass
 class EdgeData:
@@ -511,3 +513,10 @@ def TransposeMesh(Midpoint, Mesh):
 
 def GetDistanceBetweenPoints3D(point1:list, point2:list): #supporting function that just does the distance formula for 3d 
     return math.sqrt(((point2[0]-point1[0])**2) + ((point2[1]-point1[1])**2) + ((point2[2]-point1[2])**2))
+
+def ResetNormals(): #This function will reset the normals of the mesh once it has been generated
+    obj = bpy.context.active_object
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.select_all(action='SELECT')
+    bpy.ops.mesh.normals_make_consistent(inside=False)
+    bpy.ops.object.mode_set(mode='OBJECT')

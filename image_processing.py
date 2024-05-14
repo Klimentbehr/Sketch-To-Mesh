@@ -17,6 +17,7 @@ class PlaneItem:
     sideR = (90,0,0)
     back = (180,0,0)
     sideL = (270,0,0)
+    currFace = front
     
     def __init__(self, filepath ,rotation):
         self.PlaneFilepath = filepath
