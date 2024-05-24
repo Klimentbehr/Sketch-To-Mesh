@@ -1,6 +1,8 @@
 import cv2
 import math
 import bpy
+import bmesh
+import mathutils
 from .image_processing import PlaneItem, mark_corners, EditPicture, SaveImage
 from .DepthByColorHelper import AdjacentEdge, ImageDataClass, GetSlope, calucalateYIntercept, GetUniquePoints, CheckForInsideLines, CreateSolidLine, GetDistanceBetweenPoints, ColorCheck, GetFilledCircle, GetAverageOfAllCoordinateValuesInList, GetAverageDstBetweenPoints, getCircle, GetClosetPointsToValue, GetUniquePoints
 from threading import Thread, Lock
@@ -308,6 +310,7 @@ def CalculateCollision(pointWeCheck:list, LinePointDictionary:dict, imageDataCla
 #EdgeDataList: Returns the updated Edgedata list
 def CycleThroughEdgePointsForColor(EdgeDataList, imageDataClass:ImageDataClass):
     OringalImage= cv2.imread(imageDataClass.plane.PlaneFilepath)
+    OringalImage = cv2.resize(OringalImage, (200, 200))
     AverageColorList = []
 
     for edges in EdgeDataList: 
@@ -551,6 +554,7 @@ def GetMidPoint(MeshStructure):
     furthestDistance = 0 #This will hold the furthest distance from one point for comparison
     tempPoint = [1, 2, 3] #This will hold a temporary point for whatever point we need
     for point1 in MeshStructure:
+        tempPoint = list(point1) #This will hold a temporary point for whatever point we need
         for point2 in MeshStructure:
             if (point1 ==  point2): continue #if you are comparing the same point just continue on and ignore 
             else: 
@@ -614,10 +618,46 @@ def map_coordinates_to_indices(user_sequence):
 
     return indexed_pairs
   
-def ResetNormals(): #This function will reset the normals of the mesh once it has been generated
-    obj = bpy.context.active_object
-    bpy.ops.object.mode_set(mode='EDIT')
-    bpy.ops.mesh.select_all(action='SELECT')
-    bpy.ops.mesh.normals_make_consistent(inside=False)
-    bpy.ops.object.mode_set(mode='OBJECT')
+def ResetNormals(collectionName): #This function will reset the normals of the mesh once it has been generated
+    collection = bpy.data.collections.get(collectionName) #We get the collection once the collection has been made
 
+    if collection: #for all of the objects in the collection we will be reseting their normals
+        for obj in collection.objects:
+            if obj.type == 'MESH':
+                bpy.context.view_layer.objects.active = obj
+                bpy.ops.object.mode_set(mode='EDIT')
+                bpy.ops.mesh.select_all(action='SELECT')
+                bpy.ops.mesh.normals_make_consistent(inside=False)
+                bpy.ops.object.mode_set(mode='OBJECT')
+    # else: self.report({'ERROR'}, "Invalid Image") 
+
+def CountVerticesFromCamera(): #This function will count the amount of verticies visible relative to a camera
+    bm = bmesh.new() #bmesh grabs the data from a mesh in blender
+    camera = bpy.data.objects['Camera'] #The camera we will be counting our points from
+    scene = bpy.context.scene #Scene is needed to grab x and y coordinates
+    obj = bpy.context.object #grabbing the active object
+    desgraph = bpy.context.evaluated_depsgraph_get() #this is specifically used on the projection matrix
+    global visiblePoints
+
+    bpy.ops.object.mode_set(mode='OBJECT')
+    bpy.context.view_layer.objects.active = obj #setting the active object
+
+    bm.from_mesh(obj.data) #grabbing the mesh's data
+
+    #These two objects are the perspective matrixes of the camera which we will compare with the bmesh to see if they are inside the camera's view
+    cameraMatrix = camera.matrix_world.normalized().inverted()
+    cameraProjectionMatrix = camera.calc_matrix_camera(desgraph, x=scene.render.resolution_x, y=scene.render.resolution_y, scale_x=scene.render.pixel_aspect_x, scale_y=scene.render.pixel_aspect_y)
+
+    for vertex in bm.verts:
+        if IsVertexVisible(vertex, cameraMatrix, cameraProjectionMatrix): 
+            visiblePoints = visiblePoints + 1
+
+def IsVertexVisible(vertex, cameraMatrix, cameraProjectionMatrix): #Assistant function to the function above
+    cameraLocal = cameraMatrix @ vertex.co
+    cameraWorld = cameraProjectionMatrix @ cameraLocal.to_4d()
+
+    if cameraWorld.w > 0:
+        cameraWorld /= cameraWorld.w
+        if -1 <= cameraWorld.x <= 1 and -1 <= cameraWorld.y <= 1:
+            return True
+    return False
