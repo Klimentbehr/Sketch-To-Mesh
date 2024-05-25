@@ -1,7 +1,7 @@
-from pymongo import MongoClient
-from pymongo.mongo_client import MongoClient
-from pymongo.errors import DuplicateKeyError
-from bson import ObjectId # unsure if needed
+#from pymongo import MongoClient
+#from pymongo.mongo_client import MongoClient
+#from pymongo.errors import DuplicateKeyError
+#from bson import ObjectId # unsure if needed
 import os
 
 from .blender_operations import encode_file, decode_file
@@ -88,13 +88,13 @@ def delete_files_by_object_id(object_id_delete):
     collection = db['Files']
 
     # convert the string objectId to ObjectId type
-    objectId = ObjectId(object_id_delete)
+    ##objectId = ObjectId(object_id_delete)
 
-    result = collection.delete_one({"_id": objectId})
+    ##result = collection.delete_one({"_id": objectId})
 
     db.client.close()
 
-    return result.deleted_count # always 0 or 1, because objectId is unique 
+    ##return result.deleted_count # always 0 or 1, because objectId is unique 
 
 # adding to that, I will not implement account deletion here as it would not make sense since we do not have permission levels on the DB.
 def insert_user(email, hash_password):

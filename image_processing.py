@@ -2,7 +2,6 @@ import cv2
 import os
 import numpy as np
 import bpy
-import random
 from dataclasses import dataclass
 
 @dataclass

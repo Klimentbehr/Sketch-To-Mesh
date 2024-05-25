@@ -1,22 +1,35 @@
 bl_info = {
-    "name": "Sketch_To_Mesh",
+    "name": "Sketch_To_MeshV2",
     "author": "LuckyNinjas",
-    "version": (0, 0, 1),
-    "blender": (4, 0, 0),
+    "version": (0, 0, 2),
+    "blender": (4, 1, 1),
     "location": "3D Viewport > Sidebar > My Custom Panel category",
-    "description": "The Inital UI skeleton",
+    "description": " This application's purpose is to convert a sketch or drawing into a mesh that can be imported into Blender. The application will take a set of images in .png extensions and run those images through a machine-learning model to output a usable mesh. This mesh will then be exported so that the user can do what they want with the file, such as copying and sharing the file or personally using it.",
     "category": "Development",
+    "wheels" : [
+        "./wheels/bcrypt-4.1.3-cp39-abi3-macosx_10_12_universal2.whl",
+        "./wheels/bcrypt-4.1.3-cp39-abi3-win_amd64.whl",
+        "./wheels/dnspython-2.6.1-py3-none-any.whl", 
+        "./wheels/numpy-1.26.4-pp39-pypy39_pp73-win_amd64.whl",
+        "./wheels/numpy-1.26.4-cp312-cp312-macosx_11_0_arm64.whl",
+        "./wheels/opencv_python-4.9.0.80-cp37-abi3-macosx_11_0_arm64.whl",
+        "./wheels/opencv_python-4.9.0.80-cp37-abi3-win_amd64.whl",
+        "./wheels/pymongo-4.7.2-cp312-cp312-win_amd64.whl",
+        "./wheels/pymongo-4.7.2-cp312-cp312-macosx_11_0_arm64.whl",
+    ]
 }
-    
+
 import bpy
 
-from .ui_operations import OBJECT_OT_add_plane_item, Reset_Input_Images, VIEW3D_PT_Sketch_To_Mesh_Views_FilePath_Panel, PlaceImageIn3D, PlaceMesh,  NotificationPopup, VIEW3D_PT_Sketch_To_Mesh_MeshSettings_Panel, Reset_Mesh_Collection
-from .testing_operations import DoImg,  ExportToDatabase#, StMTestImagePrep, StMTestSaveFileToDb, StMTestConnectionOperator, StMTestGetFileFromDbFromUserId, StMTestDeleteFileFromDbFromUserId,
+from .ui_operations import OBJECT_OT_add_plane_item, Reset_Input_Images,VIEW3D_PT_Sketch_To_Mesh_Views_FilePath_Panel, PlaceImageIn3D, PlaceMesh, NotificationPopup, VIEW3D_PT_Sketch_To_Mesh_MeshSettings_Panel, Reset_Mesh_Collection
+#from .testing_operations import ExportToDatabase#, DoImg, StMTestImagePrep, StMTestSaveFileToDb, StMTestConnectionOperator, StMTestGetFileFromDbFromUserId, StMTestDeleteFileFromDbFromUserId,
 from .DatabaseUI import DataBaseLogin, DataBaseRegister, DocumentItem, DataBaseLogout,  DataBase_UIList, DeleteFromDatabase, AccessDatabase, AddToDatabase, ImportFromDataBase
 from .base_ui import VIEW3D_PT_Sketch_To_Mesh_Panel, DataBaseUIMenu #, VIEW3D_PT_Sketch_To_Mesh_Testing
 
+
 def register():
-  
+    #we need to install pymongo right now it is downloaded but it has to be installed
+
     bpy.types.Scene.poly_count_range = bpy.props.IntProperty(name="Vertice Separation Modifer", default=10, min=0, max=100)
 
     bpy.types.Scene.mesh_rating = bpy.props.IntProperty(name="Mesh Rating", default=10, min=0, max=100)
@@ -41,7 +54,7 @@ def register():
     bpy.utils.register_class(VIEW3D_PT_Sketch_To_Mesh_Panel)
     bpy.utils.register_class(VIEW3D_PT_Sketch_To_Mesh_Views_FilePath_Panel)
     bpy.utils.register_class(PlaceImageIn3D)
-    bpy.utils.register_class(DoImg)
+    #bpy.utils.register_class(DoImg)
     bpy.utils.register_class(VIEW3D_PT_Sketch_To_Mesh_MeshSettings_Panel)
     #bpy.utils.register_class(VIEW3D_PT_Sketch_To_Mesh_Testing)
     bpy.utils.register_class(NotificationPopup)
@@ -60,7 +73,7 @@ def register():
     
     # Tests
     bpy.utils.register_class(PlaceMesh)
-    bpy.utils.register_class(ExportToDatabase)
+    #bpy.utils.register_class(ExportToDatabase)
     bpy.utils.register_class(DataBaseUIMenu)
     bpy.utils.register_class(DataBaseRegister)
     bpy.utils.register_class(DataBaseLogin)
@@ -92,7 +105,7 @@ def unregister():
     bpy.utils.unregister_class(VIEW3D_PT_Sketch_To_Mesh_Panel)
     bpy.utils.unregister_class(VIEW3D_PT_Sketch_To_Mesh_Views_FilePath_Panel)
     bpy.utils.unregister_class(PlaceImageIn3D)
-    bpy.utils.unregister_class(DoImg)
+    #bpy.utils.unregister_class(DoImg)
     bpy.utils.unregister_class(VIEW3D_PT_Sketch_To_Mesh_MeshSettings_Panel)
     #bpy.utils.unregister_class(VIEW3D_PT_Sketch_To_Mesh_Testing)
     bpy.utils.unregister_class(NotificationPopup)
@@ -112,7 +125,7 @@ def unregister():
     # db test connection and image prep
     # Tests
     bpy.utils.unregister_class(PlaceMesh)
-    bpy.utils.unregister_class(ExportToDatabase)
+    #bpy.utils.unregister_class(ExportToDatabase)
     bpy.utils.unregister_class(DataBaseUIMenu)
     bpy.utils.unregister_class(DataBaseRegister)
     bpy.utils.unregister_class(DataBaseLogin)
