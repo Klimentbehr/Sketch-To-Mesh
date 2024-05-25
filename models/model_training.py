@@ -107,5 +107,5 @@ def predict_image(image_path):
     
     print(f"Predicted class: {predicted_class}")
 
-test_image_path = r"C:\Users\RAFAEL MUITO ZIKA\Desktop\Test Images\test_image.png"
+test_image_path = r"C:\Users\RAFAEL MUITO ZIKA\Desktop\Test Images\Cube_3_angle_36.00_30.00_POINT_1000.png"
 predict_image(test_image_path)
