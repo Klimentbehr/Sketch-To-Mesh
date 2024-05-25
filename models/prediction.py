@@ -1,14 +1,10 @@
-# predict_shape.py
-
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing import image
 import numpy as np
 
-# Load the model
 model_path = r"C:\Users\RAFAEL MUITO ZIKA\Desktop\Test Images\models\stm-v.0.7.keras"
 model = load_model(model_path)
 
-# Function to predict shape from image path
 def predict_shape(img_path):
     img_width, img_height = 150, 150
     img = image.load_img(img_path, target_size=(img_width, img_height))
