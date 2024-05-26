@@ -8,7 +8,6 @@ def count_files_in_directory(directory):
             counts[class_name] = len(os.listdir(class_dir))
     return counts
 
-# Assuming your dataset directory structure is like this:
 # dataset/
 # ├── test/
 # │   ├── Cylinder/

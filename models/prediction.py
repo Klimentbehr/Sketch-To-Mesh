@@ -1,23 +1,34 @@
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing import image
 import numpy as np
+import json
+import os
 
-model_path = r"C:\Users\RAFAEL MUITO ZIKA\Desktop\Test Images\models\stm-v.0.7.keras"
-model = load_model(model_path)
+# load model, specify which version 
+model_save_dir = r"C:\Users\RAFAEL MUITO ZIKA\Desktop\Test Images\models"
+version = 1.0
+model_save_path = os.path.join(model_save_dir, f'stm-v.{version}.keras')
+model = load_model(model_save_path)
 
-def predict_shape(img_path):
-    img_width, img_height = 150, 150
-    img = image.load_img(img_path, target_size=(img_width, img_height))
+# load json file with indices because i fucked up and didnt save the class indices in the model training
+class_indices_path = os.path.join(model_save_dir, 'class_indices.json')
+with open(class_indices_path, 'r') as f:
+    class_indices = json.load(f)
+class_indices = {v: k for k, v in class_indices.items()}  # Reverse the class indices dictionary
+
+def predict_image(image_path):
+    img_width, img_height = 224, 224  # this is needed because the model was trained to analyze images of this dimension
+    img = image.load_img(image_path, target_size=(img_width, img_height))
     img_array = image.img_to_array(img) / 255.0
     img_array = np.expand_dims(img_array, axis=0)
 
-    prediction = model.predict(img_array)
-    classes = ['Cilinder', 'Cone', 'Cube', 'Pyramid', 'Sphere']
-    predicted_class = classes[np.argmax(prediction)]
-    return predicted_class
+    predictions = model.predict(img_array)
+    predicted_class_index = np.argmax(predictions[0])
+    
+    predicted_class = class_indices[predicted_class_index]
+    
+    print(f"Predicted class: {predicted_class}")
 
-# Example usage
-img_path = r"C:\Users\RAFAEL MUITO ZIKA\Desktop\Test Images\oldD\test\Cube\Cube_3_4_aa655ae0-8f3b-4e22-afd9-3d845e1bab6a_outline_150.38_-55.73.png"
 
-predicted_shape = predict_shape(img_path)
-print(f'The predicted shape is: {predicted_shape}')
+test_image_path = r"C:\Users\RAFAEL MUITO ZIKA\Desktop\Test Images\OLD DATASETS\datasets\train\Cone\Cone_1_angle_108.00_30.00_SUN_1000.png" 
+predict_image(test_image_path)
