@@ -27,6 +27,10 @@ class ImageDataClass:
         self.radius = radius
         self.plane = plane
         self.Color = Color
+        print(plane.ImagePlaneFilePath)
+        f = open("demofile2.txt", "a")
+        f.write(plane.ImagePlaneFilePath)
+        f.close()
         self.image = cv2.imread(plane.ImagePlaneFilePath)
         self.ImageShape = (self.image.shape[0]-1, self.image.shape[1]-1)
 

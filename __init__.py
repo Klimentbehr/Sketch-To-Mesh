@@ -14,8 +14,7 @@ bl_info = {
         "./wheels/numpy-1.26.4-cp312-cp312-macosx_11_0_arm64.whl",
         "./wheels/opencv_python-4.9.0.80-cp37-abi3-macosx_11_0_arm64.whl",
         "./wheels/opencv_python-4.9.0.80-cp37-abi3-win_amd64.whl",
-        "./wheels/pymongo-4.7.2-cp312-cp312-win_amd64.whl",
-        "./wheels/pymongo-4.7.2-cp312-cp312-macosx_11_0_arm64.whl",
+        "./wheels/pymongo-4.6.1-cp312-cp312-win_amd64.whl",
     ]
 }
 
@@ -28,8 +27,6 @@ from .base_ui import VIEW3D_PT_Sketch_To_Mesh_Panel, DataBaseUIMenu #, VIEW3D_PT
 
 
 def register():
-    #we need to install pymongo right now it is downloaded but it has to be installed
-
     bpy.types.Scene.poly_count_range = bpy.props.IntProperty(name="Vertice Separation Modifer", default=10, min=0, max=100)
 
     bpy.types.Scene.mesh_rating = bpy.props.IntProperty(name="Mesh Rating", default=10, min=0, max=100)

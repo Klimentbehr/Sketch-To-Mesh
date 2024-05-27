@@ -284,23 +284,7 @@ def PlaceImage(self, GlobalPlaneDataArray:list[PlaneItem] ):
                 #this creates a new file path to the image we just saved
                 plane_data.ImagePlaneFilePath = os.path.abspath(ImageDiretoryForNewImage + "\\" + plane_data.ImagePlaneName + Extension) 
                 
-                if plane_data.ImagePlaneFilePath:
-                    filename = os.path.basename(plane_data.ImagePlaneFilePath)
-                    FileDirectory = r"" + plane_data.ImagePlaneFilePath[: plane_data.ImagePlaneFilePath.rfind("\\")] + "\\"
-                    #bpy.ops.import_image.to_plane(files=[{"name":filename, "name":filename}], directory=FileDirectory, relative=False)
-                    bpy.ops.import_image.to_plane(files=[{"name":filename, "name":filename}], directory=FileDirectory, relative=False)
-                    #we set the rotation and location of each plane
-                    bpy.data.objects[plane_data.ImagePlaneName].select_set(True)
-                    match Itervalue :
-                        case 1: bpy.ops.transform.translate(value=(-0.01, 0 , 0), orient_type='GLOBAL', orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type='GLOBAL', constraint_axis=(False, True, False), mirror=False, use_proportional_edit=False, proportional_edit_falloff='SMOOTH', proportional_size=1, use_proportional_connected=False, use_proportional_projected=False, snap=False, snap_elements={'INCREMENT'}, use_snap_project=False, snap_target='CLOSEST', use_snap_self=True, use_snap_edit=True, use_snap_nonedit=True, use_snap_selectable=False, alt_navigation=True)
-                        case 2: bpy.context.object.rotation_euler[2] = 0
-                else:
-                    match Itervalue:
-                        case 0: MissingView = "FrontView"
-                        case 1: MissingView = "BackView"
-                        case 2: MissingView = "SideView"
-                    self.report({'ERROR'}, "No inputted Image for" + MissingView)
-                Itervalue = Itervalue + 1
+                #bpy.ops.import_image.to_plane(files=[{"name":filename, "name":filename}], directory=FileDirectory, relative=False)
             else:
                 self.report({'ERROR'}, "No inputted Image.")
                 Itervalue = Itervalue + 1

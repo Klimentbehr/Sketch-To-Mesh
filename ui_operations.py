@@ -130,8 +130,8 @@ class VIEW3D_PT_Sketch_To_Mesh_MeshSettings_Panel(bpy.types.Panel):
             row = layout.row()
             row.operator("object.reset_mesh_collection", text="Reset Mesh")
             row = layout.row()
-            row.operator("wm.database_export", text="Export File")
-            row = layout.row()
+            #row.operator("wm.database_export", text="Export File")
+            #row = layout.row()
             row.prop(context.scene, "mesh_rating", text="Mesh Rating", slider=True)
 
 
