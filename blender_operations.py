@@ -4,9 +4,10 @@ from os import path
 import cv2
 import io
 import tempfile
+import time
 from .image_processing import PlaneItem, EditPicture, SaveImage
 from .file_conversion import blend_opener, fbx_opener
-from .DepthByColor import GenerateEdges, NormaliseData, GenerateShapeEdges, GetDistanceBetweenPoints, ColorCheck
+from .DepthByColor import GenerateEdges, NormaliseData, GenerateShapeEdges, GetDistanceBetweenPoints, ColorCheck, ResetNormals, CountVerticesFromCamera, visiblePoints
 
 #saveObj
 #Description
@@ -323,6 +324,8 @@ def DrawMeshToScreen(MeshStructure, self, CollectionName = "Sketch_to_Mesh_Colle
             bpy.context.scene.collection.children.link(collection)
         # add object to scene collection
         collection.objects.link(new_object)
+        ResetNormals(CollectionName)
+        CountVerticesFromCamera()
 
 
 #DrawMesh
