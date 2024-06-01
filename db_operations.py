@@ -1,7 +1,7 @@
-#from pymongo import MongoClient
-#from pymongo.mongo_client import MongoClient
-#from pymongo.errors import DuplicateKeyError
-#from bson import ObjectId # unsure if needed
+from pymongo import MongoClient
+from pymongo.mongo_client import MongoClient
+from pymongo.errors import DuplicateKeyError
+from bson import ObjectId # unsure if needed
 import os
 
 from .blender_operations import encode_file, decode_file

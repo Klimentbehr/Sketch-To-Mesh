@@ -46,7 +46,16 @@ class OBJECT_OT_add_plane_item(bpy.types.Operator):
 
     def execute(self, context):
         #adds the plane Itme to the Plane Item List
-        NewFileRotationPair = PlaneItem(bpy.context.scene.PlaneFilePath, bpy.context.scene.PlaneRotation )
+        PlaneRotations:tuple
+        match bpy.context.scene.PlaneRotation:
+            case "front": PlaneRotations =(0,0,0)
+            case "Right Side": PlaneRotations = (90,0,0)
+            case "Back": PlaneRotations = (180,0,0)
+            case "Left Side": PlaneRotations = (270,0,0)
+            case "Top": PlaneRotations = (0,90,0)
+            case "Bottom": PlaneRotations = (0,270,0)
+
+        NewFileRotationPair = PlaneItem(bpy.context.scene.PlaneFilePath, PlaneRotations )
         GlobalPlaneDataArray.append(NewFileRotationPair)
         global PlaneAdded; PlaneAdded = True
         return {'FINISHED'}
@@ -69,7 +78,7 @@ class VIEW3D_PT_Sketch_To_Mesh_Views_FilePath_Panel(bpy.types.Panel):
         row = Firstbox.row()
         Firstbox.prop(context.scene, "PlaneFilePath", text="Image file path") 
         row = Firstbox.row()
-        row.prop(context.scene, "PlaneRotation", text="Rotation", slider=True) 
+        Firstbox.prop(context.scene, "PlaneRotation")
         row = Firstbox.row()
         Firstbox.operator("object.add_plane_item", text="Add Image")
 
@@ -93,7 +102,7 @@ class PlaceImageIn3D(bpy.types.Operator):
     bl_description = "Sends images to feature detection" # rework possibly?
 
     def execute(self, context):
-        Feature_detection(self=self, PlaneDataArray=GlobalPlaneDataArray)
+        #Feature_detection(self=self, PlaneDataArray=GlobalPlaneDataArray)
         global PlaneCreated
         PlaneCreated = True
         return {'FINISHED'}

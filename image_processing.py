@@ -296,6 +296,24 @@ def PlaceImage(self, GlobalPlaneDataArray:list[PlaneItem] ):
                 self.report({'ERROR'}, "No inputted Image.")
                 Itervalue = Itervalue + 1
 
+
+def PlaceSingluarImage(plane_data:PlaneItem ):
+    #this will keep count of the views were have captured
+    Itervalue = 0
+    #this will be a folder in the sketch-to-Mesh project. This will hold the Image processed
+    ImageDiretoryForNewImage = "ImageFolder"
+    
+    if plane_data :
+        #this is used for the new image. We want to save the new image as the same type of file as the first
+        Extension =  plane_data.PlaneFilepath[plane_data.PlaneFilepath.rfind("."): ] 
+        plane_data.ImagePlaneName = "View" + str(Itervalue) #this is the file name for the image we are creating
+        # allows us to access the plane after creation
+        outline_image(plane_data.PlaneFilepath, Extension, plane_data.ImagePlaneName, ImageDiretoryForNewImage)
+        #this creates a new file path to the image we just saved
+        plane_data.ImagePlaneFilePath = os.path.abspath(ImageDiretoryForNewImage + "\\" + plane_data.ImagePlaneName + Extension) 
+        #bpy.ops.import_image.to_plane(files=[{"name":filename, "name":filename}], directory=FileDirectory, relative=False)
+    return plane_data
+
 def Feature_detection(self, PlaneDataArray : list[PlaneItem]):
     KeyPoints: list = []
     Descriptors: list = []

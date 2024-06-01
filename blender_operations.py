@@ -7,7 +7,7 @@ import tempfile
 import time
 from .image_processing import PlaneItem, EditPicture, SaveImage
 from .file_conversion import blend_opener, fbx_opener
-from .DepthByColor import GenerateEdges, NormaliseData, GenerateShapeEdges, GetDistanceBetweenPoints, ColorCheck, ResetNormals, CountVerticesFromCamera, visiblePoints
+from .DepthByColor import GenerateEdges, NormaliseData, GenerateShapeEdges, GetDistanceBetweenPoints, ColorCheck, ResetNormals, CountVerticesFromCamera, MultipleImagePath
 
 #saveObj
 #Description
@@ -339,6 +339,9 @@ def DrawMeshToScreen(MeshStructure, self, CollectionName = "Sketch_to_Mesh_Colle
 #isComplex: thhis tells us if we are making a complex image or not
 
 def DrawMesh(ColorWeAreLookingFor, PolyCount, self, PlaneArray: list[PlaneItem], isComplex):
+    counter = 0
+    MeshStructure = {}
+    
     for plane in PlaneArray:
         if isComplex == True:
             # Processing for complex images
@@ -354,20 +357,21 @@ def DrawMesh(ColorWeAreLookingFor, PolyCount, self, PlaneArray: list[PlaneItem],
             DrawMeshToScreen(MeshStructureLibrary[0], self, "Sketch_To_Mesh_Collection")
         else:
             # Processing for simple images
-            MeshStructure = GenerateShapeEdges(PolyCount, plane, ColorWeAreLookingFor)
-            if MeshStructure:
-                DrawMeshToScreen(MeshStructure, self)
-            else:
-                self.report({'ERROR'}, "Invalid Image")
+            if counter < 1: MeshStructure, EdgeData = GenerateShapeEdges(PolyCount, plane, ColorWeAreLookingFor)
+            else: MeshStructure = MultipleImagePath(MeshStructure, EdgeData, PolyCount, plane, ColorWeAreLookingFor)
+            for ImageValues in range(3):
+                CurrPath = os.path.abspath("ImageFolder\\" + "View" + str(ImageValues) + plane.PlaneFilepath[plane.PlaneFilepath.rfind("."): ] )
+                if path.exists(CurrPath): os.remove(CurrPath) # if we find that file we will delete it
+        counter += 1
+    if MeshStructure: DrawMeshToScreen(MeshStructure, self)
+    else: self.report({'ERROR'}, "Invalid Image")
 
-# TODO: return something that is not 0. case handling and error handling, as well as completed and noncompleted states.
 def encode_file(file_path):
     
    with open(file_path, "rb") as file:
         blend_file_contents = io.BytesIO(file.read())
         return blend_file_contents
 
-# TODO: return something that is not 0. case handling and error handling, as well as completed and noncompleted states.
 def decode_file(data, file_extension):
     #Apparently the data doesn't need to be decoded so we will handle the different
     #file extensions handled here instead of outside the file_conversion.py file
@@ -379,12 +383,9 @@ def decode_file(data, file_extension):
 
     #Deal with the separate file extensions
     match file_extension :
-        case ".blend":
-            blend_opener(temp_file.name)
-        case ".fbx":
-            fbx_opener(temp_file.name)
-        case _: #defualt case # if there is an image file
-            bpy.ops.import_image.to_plane(files=[{"name":temp_file.name, "name":temp_file.name}], directory="", relative=False)
+        case ".blend": blend_opener(temp_file.name)
+        case ".fbx":fbx_opener(temp_file.name)
+        case _:  bpy.ops.import_image.to_plane(files=[{"name":temp_file.name, "name":temp_file.name}], directory="", relative=False)#defualt case # if there is an image file
 
     #remove the temp file
     os.unlink(temp_file.name)

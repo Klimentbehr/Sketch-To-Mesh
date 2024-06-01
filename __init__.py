@@ -41,7 +41,7 @@ def register():
 
     #Plane data Properites
     bpy.types.Scene.PlaneFilePath = bpy.props.StringProperty(name="File Path",subtype='FILE_PATH')
-    bpy.types.Scene.PlaneRotation = bpy.props.IntProperty(name="Image Center Y", default=0, min=-180, max=180)
+    bpy.types.Scene.PlaneRotation = bpy.props.EnumProperty(name="PlaneRotation", description="Roations",items=[("front", "front", "front"), ("Right Side", "Right Side", "Right Side"), ("Back","Back","Back"), ("Left Side", "Left Side", "Left Side"), ("Top", "Top", "Top"), ("Bottom","Bottom","Bottom")])
 
     #Classes
     bpy.utils.register_class(OBJECT_OT_add_plane_item)
@@ -122,7 +122,7 @@ def unregister():
     # db test connection and image prep
     # Tests
     bpy.utils.unregister_class(PlaceMesh)
-    #bpy.utils.unregister_class(ExportToDatabase)
+    bpy.utils.unregister_class(ExportToDatabase)
     bpy.utils.unregister_class(DataBaseUIMenu)
     bpy.utils.unregister_class(DataBaseRegister)
     bpy.utils.unregister_class(DataBaseLogin)
