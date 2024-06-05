@@ -46,7 +46,7 @@ def create_temp(predicted_object_name):
         {'func': bpy.ops.mesh.primitive_cube_add, 'param': 'size', 'name': 'Cube'},
         {'func': bpy.ops.mesh.primitive_uv_sphere_add, 'param': 'radius', 'name': 'Sphere'},
         {'func': bpy.ops.mesh.primitive_cone_add, 'param': 'radius1', 'name': 'Cone'},
-        {'func': bpy.ops.mesh.primitive_cylinder_add, 'param': 'radius', 'name': 'Cylinder'},
+        {'func': bpy.ops.mesh.primitive_cylinder_add, 'param': 'radius', 'name': 'Cilinder'},
         {'func': add_pyramid, 'param': 'size', 'name': 'Pyramid'}
     ]
     
