@@ -15,6 +15,15 @@ class PlaneItem:
     def __init__(self, filepath ,rotation):
         self.PlaneFilepath = filepath
         self.PlaneRotation = rotation
+        
+def fix_path(self, PlaneDataArray : list[PlaneItem]):
+    path = ''
+    if(PlaneDataArray.__len__() >= 1):
+        for PlaneData in PlaneDataArray:
+            path = PlaneData.PlaneFilepath
+            break
+
+    return path
 
 # this will be called once the images are ready
 def prepare_image(image_path):

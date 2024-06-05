@@ -10,7 +10,7 @@ bl_info = {
     
 import bpy
 
-from .ui_operations import OBJECT_OT_add_plane_item, Reset_Input_Images, VIEW3D_PT_Sketch_To_Mesh_Views_FilePath_Panel, PlaceImageIn3D, PlaceMesh,  NotificationPopup, VIEW3D_PT_Sketch_To_Mesh_MeshSettings_Panel, Reset_Mesh_Collection
+from .ui_operations import OBJECT_OT_add_plane_item, Reset_Input_Images, VIEW3D_PT_Sketch_To_Mesh_Views_FilePath_Panel, PlaceImageIn3D, PlaceMesh,  NotificationPopup, VIEW3D_PT_Sketch_To_Mesh_MeshSettings_Panel, Reset_Mesh_Collection, PredictAndPlace
 from .testing_operations import DoImg,  ExportToDatabase#, StMTestImagePrep, StMTestSaveFileToDb, StMTestConnectionOperator, StMTestGetFileFromDbFromUserId, StMTestDeleteFileFromDbFromUserId,
 from .DatabaseUI import DataBaseLogin, DataBaseRegister, DocumentItem, DataBaseLogout,  DataBase_UIList, DeleteFromDatabase, AccessDatabase, AddToDatabase, ImportFromDataBase
 from .base_ui import VIEW3D_PT_Sketch_To_Mesh_Panel, DataBaseUIMenu #, VIEW3D_PT_Sketch_To_Mesh_Testing
@@ -45,6 +45,9 @@ def register():
     bpy.utils.register_class(VIEW3D_PT_Sketch_To_Mesh_MeshSettings_Panel)
     #bpy.utils.register_class(VIEW3D_PT_Sketch_To_Mesh_Testing)
     bpy.utils.register_class(NotificationPopup)
+    
+    # model
+    bpy.utils.register_class(PredictAndPlace)
 
     # db
     bpy.utils.register_class(DocumentItem)    
@@ -96,6 +99,9 @@ def unregister():
     bpy.utils.unregister_class(VIEW3D_PT_Sketch_To_Mesh_MeshSettings_Panel)
     #bpy.utils.unregister_class(VIEW3D_PT_Sketch_To_Mesh_Testing)
     bpy.utils.unregister_class(NotificationPopup)
+    
+    # model
+    bpy.utils.unregister_class(PredictAndPlace)
 
     # db
     bpy.utils.unregister_class(AddToDatabase)
