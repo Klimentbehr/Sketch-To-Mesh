@@ -8,8 +8,8 @@ from dataclasses import dataclass
 class PlaneItem:
     PlaneFilepath = bpy.props.StringProperty(name="File Path",subtype='FILE_PATH')
     PlaneRotation = bpy.props.IntProperty(name="Rotation", default=0)
-    ImagePlaneName: str
-    ImagePlaneFilePath: str
+    ImagePlaneName= ""
+    ImagePlaneFilePath= ""
     top = (0,90,0)
     bottom = (0,270,0)
     front = (0,0,0)
@@ -21,6 +21,15 @@ class PlaneItem:
     def __init__(self, filepath ,rotation):
         self.PlaneFilepath = filepath
         self.PlaneRotation = rotation
+        
+def fix_path(self, PlaneDataArray : list[PlaneItem]):
+    path = ''
+    if(PlaneDataArray.__len__() >= 1):
+        for PlaneData in PlaneDataArray:
+            path = PlaneData.PlaneFilepath
+            break
+
+    return path
 
 # this will be called once the images are ready
 def prepare_image(image_path):

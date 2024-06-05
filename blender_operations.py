@@ -4,7 +4,6 @@ from os import path
 import cv2
 import io
 import tempfile
-import time
 from .image_processing import PlaneItem, EditPicture, SaveImage
 from .file_conversion import blend_opener, fbx_opener
 from .DepthByColor import GenerateEdges, NormaliseData, GenerateShapeEdges, GetDistanceBetweenPoints, ColorCheck, ResetNormals, CountVerticesFromCamera, MultipleImagePath
@@ -340,7 +339,6 @@ def DrawMeshToScreen(MeshStructure, self, CollectionName = "Sketch_to_Mesh_Colle
 def DrawMesh(ColorWeAreLookingFor, PolyCount, self, PlaneArray: list[PlaneItem], isComplex):
     counter = 0
     MeshStructure = {}
-    
     for plane in PlaneArray:
         if isComplex == True:
             # Processing for complex images
@@ -354,6 +352,7 @@ def DrawMesh(ColorWeAreLookingFor, PolyCount, self, PlaneArray: list[PlaneItem],
             PixelLineDictionary = GetLineOfPixels(ImageDictionary[0], Imagedata, Image, ColorWeAreLookingFor)
             MeshStructureLibrary = DefineDictioniesForColorsLines(PixelLineDictionary)
             DrawMeshToScreen(MeshStructureLibrary[0], self, "Sketch_To_Mesh_Collection")
+            break #temp break    
         else:
             # Processing for simple images
             if counter < 1: MeshStructure, EdgeData = GenerateShapeEdges(PolyCount, plane, ColorWeAreLookingFor)
@@ -362,6 +361,8 @@ def DrawMesh(ColorWeAreLookingFor, PolyCount, self, PlaneArray: list[PlaneItem],
                 CurrPath = os.path.abspath("ImageFolder\\" + "View" + str(ImageValues) + plane.PlaneFilepath[plane.PlaneFilepath.rfind("."): ] )
                 if path.exists(CurrPath): os.remove(CurrPath) # if we find that file we will delete it
         counter += 1
+        break #temp break
+        
     if MeshStructure: DrawMeshToScreen(MeshStructure, self)
     else: self.report({'ERROR'}, "Invalid Image")
 
@@ -414,17 +415,15 @@ def SearchForClosestPoint(PointArray, startingPoint ):
 
 
 def ResetImage(GlobalPlaneDataArray:list[PlaneItem]):
-    Itervalue = 0
 
     for plane_data in GlobalPlaneDataArray :
         #Finds the Images Saved
-        ImageFilePaths = []
-        for ImageValues in range(3):
-            ImageFilePaths.append(os.path.abspath("ImageFolder\\" + "View" + str(ImageValues) + plane_data.PlaneFilepath[plane_data.PlaneFilepath.rfind("."): ] ))
-            if path.exists(ImageFilePaths[ImageValues]): os.remove(ImageFilePaths[ImageValues]) # if we find that file we will delete it
-            
-        bpy.data.objects[plane_data.ImagePlaneName].select_set(True)# selects the image plane in the array 
-        bpy.ops.object.delete(use_global=False, confirm=False)#deletes the image plane in the array 
-        Itervalue = Itervalue + 1 #increases the itervalue to reach the next View string
+        if plane_data.ImagePlaneName != "":
+
+            ImageFilePaths = []
+            for ImageValues in range(3):
+                ImageFilePaths.append(os.path.abspath("ImageFolder\\" + "View" + str(ImageValues) + plane_data.PlaneFilepath[plane_data.PlaneFilepath.rfind("."): ] ))
+                if path.exists(ImageFilePaths[ImageValues]): os.remove(ImageFilePaths[ImageValues]) # if we find that file we will delete it
     # clears the PlaneData Array
     GlobalPlaneDataArray.clear() 
+

@@ -5,8 +5,9 @@ import blf
 import bpy.types
 import numpy as np
 
-from .image_processing import Feature_detection, PlaneItem
+from .image_processing import Feature_detection, PlaneItem, fix_path
 from .blender_operations import DrawMesh, ResetImage
+from .model_prediction import predict_image, create_temp
 
 GlobalPlaneDataArray : list[PlaneItem] = [] # this will eventually replace the two array under this
 PlaneAdded : bool = False
@@ -93,9 +94,10 @@ class VIEW3D_PT_Sketch_To_Mesh_Views_FilePath_Panel(bpy.types.Panel):
             row = Secondbox.row()
             row.operator("object.place_image_in_space", text="Confirm Images")
             row = Secondbox.row()
+            row.operator("object.predict_and_add", text="Predict Images")
+            row = Secondbox.row()
             row.operator("object.reset_selected_images", text="Reset Images")
-
-
+    
 class PlaceImageIn3D(bpy.types.Operator):
     bl_idname = "object.place_image_in_space"
     bl_label = "Place Images"
@@ -107,6 +109,19 @@ class PlaceImageIn3D(bpy.types.Operator):
         PlaneCreated = True
         return {'FINISHED'}
 
+class PredictAndPlace(bpy.types.Operator):
+    bl_idname = "object.predict_and_add"
+    bl_label = "Predict Images"
+    bl_description = "Sends images to model prediction"
+    
+    def execute(self, context):
+        predict_path = fix_path(self=self, PlaneDataArray=GlobalPlaneDataArray)
+        global PlaneCreated
+        PlaneCreated = True
+        predicted_object = predict_image(predict_path)
+        create_temp(predicted_object)
+        
+        return {'FINISHED'}
 
 # this will need rework.
 # TODO: figure out what of this is still usable later on
