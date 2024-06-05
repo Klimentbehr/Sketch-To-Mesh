@@ -21,7 +21,7 @@ bl_info = {
 import bpy
 
 from .ui_operations import OBJECT_OT_add_plane_item, Reset_Input_Images,VIEW3D_PT_Sketch_To_Mesh_Views_FilePath_Panel, PlaceImageIn3D, PlaceMesh, NotificationPopup, VIEW3D_PT_Sketch_To_Mesh_MeshSettings_Panel, Reset_Mesh_Collection
-#from .testing_operations import ExportToDatabase#, DoImg, StMTestImagePrep, StMTestSaveFileToDb, StMTestConnectionOperator, StMTestGetFileFromDbFromUserId, StMTestDeleteFileFromDbFromUserId,
+from .testing_operations import ExportToDatabase#, DoImg, StMTestImagePrep, StMTestSaveFileToDb, StMTestConnectionOperator, StMTestGetFileFromDbFromUserId, StMTestDeleteFileFromDbFromUserId,
 from .DatabaseUI import DataBaseLogin, DataBaseRegister, DocumentItem, DataBaseLogout,  DataBase_UIList, DeleteFromDatabase, AccessDatabase, AddToDatabase, ImportFromDataBase
 from .base_ui import VIEW3D_PT_Sketch_To_Mesh_Panel, DataBaseUIMenu #, VIEW3D_PT_Sketch_To_Mesh_Testing
 
@@ -70,7 +70,7 @@ def register():
     
     # Tests
     bpy.utils.register_class(PlaceMesh)
-    #bpy.utils.register_class(ExportToDatabase)
+    bpy.utils.register_class(ExportToDatabase)
     bpy.utils.register_class(DataBaseUIMenu)
     bpy.utils.register_class(DataBaseRegister)
     bpy.utils.register_class(DataBaseLogin)

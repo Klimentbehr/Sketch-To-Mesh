@@ -325,7 +325,6 @@ def DrawMeshToScreen(MeshStructure, self, CollectionName = "Sketch_to_Mesh_Colle
         # add object to scene collection
         collection.objects.link(new_object)
         ResetNormals(CollectionName)
-        CountVerticesFromCamera()
 
 
 #DrawMesh
