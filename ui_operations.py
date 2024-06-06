@@ -8,6 +8,7 @@ import numpy as np
 from .image_processing import Feature_detection, PlaneItem, fix_path
 from .blender_operations import DrawMesh, ResetImage
 from .model_prediction import predict_image, create_temp
+from .camera_test import camera_test, cringe_ai_model
 
 GlobalPlaneDataArray : list[PlaneItem] = [] # this will eventually replace the two array under this
 PlaneAdded : bool = False
@@ -97,6 +98,10 @@ class VIEW3D_PT_Sketch_To_Mesh_Views_FilePath_Panel(bpy.types.Panel):
             row.operator("object.predict_and_add", text="Predict Images")
             row = Secondbox.row()
             row.operator("object.reset_selected_images", text="Reset Images")
+            row = Secondbox.row()
+            row.operator("object.cameraai_edge", text="Depth Model")
+            row = Secondbox.row()
+            row.operator("object.camera_edge", text="Camera Edge") 
     
 class PlaceImageIn3D(bpy.types.Operator):
     bl_idname = "object.place_image_in_space"
@@ -121,6 +126,36 @@ class PredictAndPlace(bpy.types.Operator):
         predicted_object = predict_image(predict_path)
         create_temp(predicted_object)
         
+        return {'FINISHED'}
+    
+class StMTestCameraDetection(bpy.types.Operator):
+    bl_idname = "object.camera_edge" 
+    bl_label = "Test Camera Detection"
+    bl_description = "Test Camera functionality"
+
+    def execute(self, context):
+
+        #camera_corner()
+        camera_test()
+        #testing_tracker()
+        #test_shit()
+        #cringe_ai_model()
+
+        return {'FINISHED'}
+    
+class StMTestCameraDetectionAI(bpy.types.Operator):
+    bl_idname = "object.cameraai_edge"
+    bl_label = "Test AI Depth Detection"
+    bl_description = "Test Camera AI Depth functionality"
+
+    def execute(self, context):
+
+        #camera_corner()
+        #camera_test()
+        #testing_tracker()
+        #test_shit()
+        cringe_ai_model()
+
         return {'FINISHED'}
 
 # this will need rework.
