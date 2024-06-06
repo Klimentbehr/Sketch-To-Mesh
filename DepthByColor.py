@@ -2,14 +2,15 @@ import cv2
 import math
 import bpy
 import bmesh
-import mathutils
 from .image_processing import PlaneItem, mark_corners, EditPicture, SaveImage
 from .DepthByColorHelper import AdjacentEdge, ImageDataClass, GetSlope, calucalateYIntercept, GetUniquePoints, CheckForInsideLines, CreateSolidLine, GetDistanceBetweenPoints, ColorCheck, GetFilledCircle, GetAverageOfAllCoordinateValuesInList, GetAverageDstBetweenPoints, getCircle, GetClosetPointsToValue, GetUniquePoints
 from threading import Thread, Lock
 from dataclasses import dataclass
 
 mutex = Lock()
-meshMidpoint = None
+global meshMidpoint
+meshMidpoint = []
+global visiblePoints 
 visiblePoints = 0
 
 @dataclass
@@ -83,21 +84,25 @@ def CalculateRotation(MaxDst, angle):
 def GenerateShapeEdges(radius:int, plane:PlaneItem, ColorToLookFor):
     imageDataClass = ImageDataClass(radius, plane, ColorToLookFor)
 
-    
     FinishedList =[]
     SizedEdgePoints, MulipliersValues, imageShape = GetPointsFromImage(imageDataClass.image, plane, imageDataClass.ImageShape[0], imageDataClass.ImageShape[1], radius)
     imageDataClass.__setattr__('ImageShape', imageShape)
     imageDataClass.__setattr__('image', cv2.resize(imageDataClass.image, (imageDataClass.ImageShape[1], imageDataClass.ImageShape[0])))
     for points in SizedEdgePoints: FinishedList.append((round(points[0] / MulipliersValues[0]), round(points[1] / MulipliersValues[1])))
-
+    
     for points in FinishedList:
         EditPicture((0,0,0), points, imageDataClass.image)
         SaveImage(imageDataClass.image, plane.ImagePlaneFilePath, "View0")
  
     EdgeDataList = CreateEdgeData(FinishedList, imageDataClass)
+
+    global visiblePoints
+    visiblePoints = []
+    for points in EdgeDataList: visiblePoints.append(points)
+
     EdgeDataList = CalculateLocationsOfAvaliblePixelsAroundPoint(EdgeDataList, imageDataClass)
-    outputlist = CycleThroughEdgePointsForColor(EdgeDataList, imageDataClass)
-    return outputlist
+    outputlist, UnNormalisedData = CycleThroughEdgePointsForColor(EdgeDataList, imageDataClass)
+    return outputlist, UnNormalisedData
 
 #GetPointsFromImage
 #Description
@@ -137,7 +142,6 @@ def GetPointsFromImage(image, plane:PlaneItem, ImageRow, ImageColumn, radius):
     EdgePoints.remove(EdgePoints[-1])
     return EdgePoints, (EnlargedImageRowMultiplier, EnlargedImageColumnMultiplier), (imageShape[0], imageShape[1])
  
-
 def OrderPoints(circle_points):
     ordered_list = []
     CurrPoint = circle_points[0]
@@ -318,8 +322,8 @@ def CycleThroughEdgePointsForColor(EdgeDataList, imageDataClass:ImageDataClass):
         AverageColorList = GetAverageOfSurroundingValues(CurrEdge, OringalImage)
         CurrEdge.__setattr__('AverageColor', AverageColorList) #saves the average color for each of the instances
     
-    EdgeDataList = CalculateZAxis(EdgeDataList)
-    return EdgeDataList
+    EdgeDataList, UnNormalisedData = CalculateZAxis(EdgeDataList)
+    return EdgeDataList, UnNormalisedData
 
 #GetAverageOfSurroundingValues
 #Description
@@ -349,8 +353,6 @@ def GetAverageOfSurroundingValues(EdgeDataList:EdgeData, oringalImage):
 #Returns
 #MeshStructure: the structure of the map. This dictionary has intergers as the keys and has the VErtices, Edges, and Faces 
 def CalculateZAxis(EdgeDataList:dict):
-    XList = []; YList = []; ZList = []
-    
     ZValueIter = 0
     AdjacentEdgeZValueReference = []
     for points in EdgeDataList:
@@ -361,8 +363,12 @@ def CalculateZAxis(EdgeDataList:dict):
         ZValueIter += 1
 
     PointsToNormalise, BlenderEdgeData = GenerateMeshEdgeData(EdgeDataList, AdjacentPoint, AdjacentEdgeZValueReference)
+    return CreateBlenderData(PointsToNormalise, BlenderEdgeData)
 
-    for points in PointsToNormalise: XList.append(points[0]); YList.append(points[1]); ZList.append(points[2])
+def CreateBlenderData(PointsToNormalize, BlenderEdgeData):
+    XList = []; YList = []; ZList = []
+
+    for points in PointsToNormalize: XList.append(points[0]); YList.append(points[1]); ZList.append(points[2])
     NormalisedXData = NormaliseData(XList); NormalisedYData = NormaliseData(YList); NormalisedZData= NormaliseData(ZList)
 
     FinalVertexPoints =[]
@@ -372,7 +378,8 @@ def CalculateZAxis(EdgeDataList:dict):
     MeshStructure[0] = FinalVertexPoints
     MeshStructure[1] = BlenderEdgeData
     MeshStructure[2] = []
-    return MeshStructure
+    global meshMidpoint; meshMidpoint = GetMidPoint(MeshStructure[0])
+    return MeshStructure, PointsToNormalize
 
 #NormaliseData
 #Description
@@ -479,7 +486,6 @@ def GenerateMeshEdgeData(EdgeList:dict, AdjacentPoint:AdjacentEdge, AdjacentEdge
             AdjacentDataForBlender.append((TAdjacentPoint, TAdjacentEdgePoints[iter]))
             iter += 1
 
-
     # need our placements to know where to start our faces
     AdjacentPointLocation = len(VertexList)
     TAdjacentPointLocation= len(VertexList)+1
@@ -547,7 +553,6 @@ def CreatFaceData(AdjacentPointLocation, EdgeDataList):
     FaceList = []
     for face in Faces: FaceList.append(Faces[face])
     return FaceList
-
 
 def GetMidPoint(MeshStructure):
     estimateMidpoints = [] #This will hold the potential midpoints before they are averaged out
@@ -617,7 +622,62 @@ def map_coordinates_to_indices(user_sequence):
         indexed_pairs.append((point_index[start], point_index[end]))
 
     return indexed_pairs
-  
+
+def RecalulateVertices(VisibleVerts:list, VertsForSecondPerpesctive, Vertlist, VisibleEdgeData):
+    #we need the connections between each vert and we need the verts that are not seen to be removed
+    #we need to consider how many point are connected to each vert
+    #We also need to consider how close the points are to the verts in the SecondPerpective
+    
+    VertToEdgeForOringinal = VertAsIndicator(Vertlist, VisibleVerts, VisibleEdgeData)
+    VertToEdgeForSecondImage = VertAsIndicator(Vertlist, VertsForSecondPerpesctive, VisibleEdgeData)
+
+    SimilarityList = []
+    SimilartyDict = {}
+    for vertconnections in len(VertToEdgeForOringinal):
+        if len(VertToEdgeForOringinal[vertconnections]) == len(VertToEdgeForSecondImage[vertconnections]): SimilarityList.append(VertToEdgeForOringinal[vertconnections])
+        SimilartyDict[len(VertToEdgeForOringinal[vertconnections])] = SimilarityList
+
+    #Now we know which point have the same amount of vertices we can see which ones are teh closest
+    NewVertList = []
+    for Connections in SimilartyDict:
+            ClosestPoints = GetClosestPoint3D(Vertlist[Connections], Vertlist[SimilarityList[Connections]])
+            NewVertList.append(GetAverageOfAllCoordinateValuesInList([ClosestPoints, Connections]))
+
+    iter =0
+    for iterator in range(len(NewVertList)):
+        if iterator in VertToEdgeForOringinal:
+            Vertlist[iterator] = NewVertList[iter]
+            iter += 1
+
+    return Vertlist
+        
+def GetClosestPoint3D(Target, PointList):
+    Distances = {}
+    for points in PointList: Distances[GetDistanceBetweenPoints3D(Target, points)] = points
+    return Distances[min(Distances)]
+      
+def VertAsIndicator(FullPointlist, ComparingList, VisbleEdgeDataList):
+    VertToEdge = []
+    VertConnections = {}
+    iter = 0
+    #we will get the indicator for the point within the edgelist
+    for Vertpoints in FullPointlist:
+        for points in ComparingList:
+            if points == Vertpoints:
+                VertToEdge.append(iter) #this is the index of the vert in the edgeList
+                break
+        iter +=1
+
+    #We get the verts and all of there connections in a dictionary
+    #with this we know how many verts are connected to each point
+    for edges in VisbleEdgeDataList:
+        VertConnectionList=[]
+        for vert in VertToEdge:
+            if edges[0] == vert: 
+                for connections in range(len(edges-1)): VertConnectionList.append(edges[connections+1])
+        VertConnections[edges[0]] = VertConnectionList# we assign the connections to the vert
+    return VertConnections
+
 def ResetNormals(collectionName): #This function will reset the normals of the mesh once it has been generated
     collection = bpy.data.collections.get(collectionName) #We get the collection once the collection has been made
 
@@ -649,8 +709,7 @@ def CountVerticesFromCamera(): #This function will count the amount of verticies
     cameraProjectionMatrix = camera.calc_matrix_camera(desgraph, x=scene.render.resolution_x, y=scene.render.resolution_y, scale_x=scene.render.pixel_aspect_x, scale_y=scene.render.pixel_aspect_y)
 
     for vertex in bm.verts:
-        if IsVertexVisible(vertex, cameraMatrix, cameraProjectionMatrix): 
-            visiblePoints = visiblePoints + 1
+        if IsVertexVisible(vertex, cameraMatrix, cameraProjectionMatrix):  visiblePoints = visiblePoints + 1
 
 def IsVertexVisible(vertex, cameraMatrix, cameraProjectionMatrix): #Assistant function to the function above
     cameraLocal = cameraMatrix @ vertex.co
@@ -658,6 +717,42 @@ def IsVertexVisible(vertex, cameraMatrix, cameraProjectionMatrix): #Assistant fu
 
     if cameraWorld.w > 0:
         cameraWorld /= cameraWorld.w
-        if -1 <= cameraWorld.x <= 1 and -1 <= cameraWorld.y <= 1:
-            return True
+        if -1 <= cameraWorld.x <= 1 and -1 <= cameraWorld.y <= 1: return True
     return False
+
+def GetClosestPointToCamera(camera:CameraPoint, EdgeDatalist:list ):
+    VisiblePoints = []
+    PointandDstPair = {}
+    counter = 0
+    for Vpoints in EdgeDatalist: PointandDstPair[Vpoints] = (GetDistanceBetweenPoints3D(camera.m_Coordinate, Vpoints))
+    while (counter <= len(visiblePoints)):
+        VisPoint = min(PointandDstPair, key=PointandDstPair.get)
+        VisiblePoints.append(VisPoint) 
+        del PointandDstPair[VisPoint]
+        counter +=1
+    return VisiblePoints
+
+def MultipleImagePath(MeshStructure, EdgeData, radius, plane:PlaneItem, ColorToLookFor):
+    OrginalVisiblePoints = visiblePoints
+    camera = CameraPoint(500, meshMidpoint, plane.PlaneRotation)
+    VisiblePointsSecondList = GetClosestPointToCamera(camera, EdgeData)
+    SecondImageEdgeList = SecondImagePointgeneration(radius, plane, ColorToLookFor)
+    MeshStructure[0] = RecalulateVertices(VisiblePointsSecondList, SecondImageEdgeList, EdgeData, MeshStructure[1] )
+    return MeshStructure
+
+def SecondImagePointgeneration(radius:int, plane:PlaneItem, ColorToLookFor):
+    imageDataClass = ImageDataClass(radius, plane, ColorToLookFor)
+
+    FinishedList =[]
+    SizedEdgePoints, MulipliersValues, imageShape = GetPointsFromImage(imageDataClass.image, plane, imageDataClass.ImageShape[0], imageDataClass.ImageShape[1], radius)
+    imageDataClass.__setattr__('ImageShape', imageShape)
+    imageDataClass.__setattr__('image', cv2.resize(imageDataClass.image, (imageDataClass.ImageShape[1], imageDataClass.ImageShape[0])))
+    for points in SizedEdgePoints: FinishedList.append((round(points[0] / MulipliersValues[0]), round(points[1] / MulipliersValues[1])))
+    
+    for points in FinishedList:
+        EditPicture((0,0,0), points, imageDataClass.image)
+        SaveImage(imageDataClass.image, plane.ImagePlaneFilePath, "View0")
+    EdgeDataList = CreateEdgeData(FinishedList, imageDataClass)
+    EdgeDataList = CalculateLocationsOfAvaliblePixelsAroundPoint(EdgeDataList, imageDataClass)
+    outputlist, UnNormalisedData = CycleThroughEdgePointsForColor(EdgeDataList, imageDataClass)
+    return UnNormalisedData

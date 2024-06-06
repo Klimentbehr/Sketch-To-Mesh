@@ -1,6 +1,6 @@
 import math
 import cv2
-from .image_processing import PlaneItem, EditPicture, SaveImage
+from .image_processing import PlaneItem, EditPicture, SaveImage, PlaceSingluarImage
 from dataclasses import dataclass
 
 @dataclass
@@ -25,7 +25,7 @@ class ImageDataClass:
 
     def __init__(self, radius, plane:PlaneItem, Color):
         self.radius = radius
-        self.plane = plane
+        self.plane = PlaceSingluarImage(plane)
         self.Color = Color
         self.image = cv2.imread(plane.ImagePlaneFilePath)
         self.ImageShape = (self.image.shape[0]-1, self.image.shape[1]-1)
@@ -568,5 +568,3 @@ def GetClosetPointsToValue(PointList:list, ValueList:list):
                 ActivePoints.append(points)
     ActivePoints = GetUniquePoints(ActivePoints)
     return ActivePoints
-
-

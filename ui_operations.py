@@ -5,8 +5,10 @@ import blf
 import bpy.types
 import numpy as np
 
-from .image_processing import Feature_detection, PlaneItem
+from .image_processing import Feature_detection, PlaneItem, fix_path
 from .blender_operations import DrawMesh, ResetImage
+from .model_prediction import predict_image, create_temp
+from .camera_test import camera_test, cringe_ai_model
 
 GlobalPlaneDataArray : list[PlaneItem] = [] # this will eventually replace the two array under this
 PlaneAdded : bool = False
@@ -46,7 +48,16 @@ class OBJECT_OT_add_plane_item(bpy.types.Operator):
 
     def execute(self, context):
         #adds the plane Itme to the Plane Item List
-        NewFileRotationPair = PlaneItem(bpy.context.scene.PlaneFilePath, bpy.context.scene.PlaneRotation )
+        PlaneRotations:tuple
+        match bpy.context.scene.PlaneRotation:
+            case "front": PlaneRotations =(0,0,0)
+            case "Right Side": PlaneRotations = (90,0,0)
+            case "Back": PlaneRotations = (180,0,0)
+            case "Left Side": PlaneRotations = (270,0,0)
+            case "Top": PlaneRotations = (0,90,0)
+            case "Bottom": PlaneRotations = (0,270,0)
+
+        NewFileRotationPair = PlaneItem(bpy.context.scene.PlaneFilePath, PlaneRotations )
         GlobalPlaneDataArray.append(NewFileRotationPair)
         global PlaneAdded; PlaneAdded = True
         return {'FINISHED'}
@@ -69,7 +80,7 @@ class VIEW3D_PT_Sketch_To_Mesh_Views_FilePath_Panel(bpy.types.Panel):
         row = Firstbox.row()
         Firstbox.prop(context.scene, "PlaneFilePath", text="Image file path") 
         row = Firstbox.row()
-        row.prop(context.scene, "PlaneRotation", text="Rotation", slider=True) 
+        Firstbox.prop(context.scene, "PlaneRotation")
         row = Firstbox.row()
         Firstbox.operator("object.add_plane_item", text="Add Image")
 
@@ -84,20 +95,68 @@ class VIEW3D_PT_Sketch_To_Mesh_Views_FilePath_Panel(bpy.types.Panel):
             row = Secondbox.row()
             row.operator("object.place_image_in_space", text="Confirm Images")
             row = Secondbox.row()
+            row.operator("object.predict_and_add", text="Predict Images")
+            row = Secondbox.row()
             row.operator("object.reset_selected_images", text="Reset Images")
-
-
+            row = Secondbox.row()
+            row.operator("object.cameraai_edge", text="Depth Model")
+            row = Secondbox.row()
+            row.operator("object.camera_edge", text="Camera Edge") 
+    
 class PlaceImageIn3D(bpy.types.Operator):
     bl_idname = "object.place_image_in_space"
     bl_label = "Place Images"
     bl_description = "Sends images to feature detection" # rework possibly?
 
     def execute(self, context):
-        Feature_detection(self=self, PlaneDataArray=GlobalPlaneDataArray)
+        #Feature_detection(self=self, PlaneDataArray=GlobalPlaneDataArray)
         global PlaneCreated
         PlaneCreated = True
         return {'FINISHED'}
 
+class PredictAndPlace(bpy.types.Operator):
+    bl_idname = "object.predict_and_add"
+    bl_label = "Predict Images"
+    bl_description = "Sends images to model prediction"
+    
+    def execute(self, context):
+        predict_path = fix_path(self=self, PlaneDataArray=GlobalPlaneDataArray)
+        global PlaneCreated
+        PlaneCreated = True
+        predicted_object = predict_image(predict_path)
+        create_temp(predicted_object)
+        
+        return {'FINISHED'}
+    
+class StMTestCameraDetection(bpy.types.Operator):
+    bl_idname = "object.camera_edge" 
+    bl_label = "Test Camera Detection"
+    bl_description = "Test Camera functionality"
+
+    def execute(self, context):
+
+        #camera_corner()
+        camera_test()
+        #testing_tracker()
+        #test_shit()
+        #cringe_ai_model()
+
+        return {'FINISHED'}
+    
+class StMTestCameraDetectionAI(bpy.types.Operator):
+    bl_idname = "object.cameraai_edge"
+    bl_label = "Test AI Depth Detection"
+    bl_description = "Test Camera AI Depth functionality"
+
+    def execute(self, context):
+
+        #camera_corner()
+        #camera_test()
+        #testing_tracker()
+        #test_shit()
+        cringe_ai_model()
+
+        return {'FINISHED'}
 
 # this will need rework.
 # TODO: figure out what of this is still usable later on
@@ -130,8 +189,8 @@ class VIEW3D_PT_Sketch_To_Mesh_MeshSettings_Panel(bpy.types.Panel):
             row = layout.row()
             row.operator("object.reset_mesh_collection", text="Reset Mesh")
             row = layout.row()
-            row.operator("wm.database_export", text="Export File")
-            row = layout.row()
+            #row.operator("wm.database_export", text="Export File")
+            #row = layout.row()
             row.prop(context.scene, "mesh_rating", text="Mesh Rating", slider=True)
 
 

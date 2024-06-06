@@ -10,6 +10,8 @@ This mesh will then be exported so that the user can do what they want with the 
   - open CV
   - bpy (Blender Python Library)
   - pymongo
+  - tensorflow
+  - pytorch
 
 ## Features: 
   Sketch-To-Mesh takes in multiple images and then outputs a mesh based on those images.
