@@ -4,12 +4,12 @@
 This application's purpose is to convert a sketch or drawing into a mesh that can be imported into Blender. The application will take a set of images in .png extensions and run those images through a machine-learning model to output a usable mesh. This mesh will then be exported so that the user can do what they want with the file, such as copying and sharing the file or personally using it.
 
 ## Technologies:
-  - bcrypt
-  - OpenCV
+  - bcrypt (mostly for password encryption)
+  - OpenCV (computer vision)
   - Pytorch Vision (Depth Estimation)
   - Tensorflow Keras (CNN model object prediction)
   - bpy (Blender Python Library)
-  - pymongo
+  - pymongo (MongoDB Atlas Cluster for authentication and database operations)
 
 ## Features: 
 Sketch-To-Mesh takes in multiple images and then outputs a mesh based on those images. The addon also has a database feature that allows users to save images and mesh objects to be accessed at a later date.
