@@ -1,21 +1,38 @@
 # Sketch-to-Mesh 
 
 ## Introduction:
-  This application's purpose is to convert a sketch or drawing into a mesh that can be imported into Blender. 
-The application will take a set of images in .png extensions and run those images through a machine-learning model to output a usable mesh. 
-This mesh will then be exported so that the user can do what they want with the file, such as copying and sharing the file or personally using it.
+This application's purpose is to convert a sketch or drawing into a mesh that can be imported into Blender. The application will take a set of images in .png extensions and run those images through a machine-learning model to output a usable mesh. This mesh will then be exported so that the user can do what they want with the file, such as copying and sharing the file or personally using it.
 
 ## Technologies:
   - bcrypt
   - OpenCV
   - Pytorch Vision (Depth Estimation)
-  - Tensorflow Keria (CNN model object prediction)
+  - Tensorflow Keras (CNN model object prediction)
   - bpy (Blender Python Library)
   - pymongo
 
 ## Features: 
-  Sketch-To-Mesh takes in multiple images and then outputs a mesh based on those images.
-  The addon also has a database feature that allows users to save images and mesh objects to be accessed at a later date.
+Sketch-To-Mesh takes in multiple images and then outputs a mesh based on those images. The addon also has a database feature that allows users to save images and mesh objects to be accessed at a later date.
+
+## AI Model:
+The core of Sketch-to-Mesh lies in its advanced AI model, which leverages deep learning techniques to accurately convert 2D sketches into 3D meshes. Here’s a brief overview of how the model works:
+  - **Convolutional Neural Network (CNN)**: The application uses a CNN to analyze the input images and predict the 3D structure of the objects. The CNN has been trained on a large dataset of 2D sketches and their corresponding 3D models to learn the mapping between these two domains.
+  - **Depth Estimation:** Pytorch Vision is employed for depth estimation, providing an additional dimension to the 2D sketches and aiding in the accurate reconstruction of 3D shapes.
+  - **Model Training:** The model was trained using TensorFlow and Keras, incorporating various techniques to enhance its accuracy and robustness. Training involved using a diverse dataset with multiple variations of 3D geometric objects to ensure the model can generalize well to different types of sketches
+  - **Data Augmentation:** To improve the model's performance, extensive data augmentation techniques were applied to the training dataset, including transformations like rotation, scaling, and color adjustments.
+  - **Evaluation:** The model achieved a high accuracy rate of 96%, making it reliable for generating precise 3D meshes from 2D sketches.
+
+stm-model training, prediction, and dataset generator documentation can be found here: <https://github.com/rfernandesdasilva/stm-model> 
+
+## Dataset Generator:
+To train our model effectively, we developed a custom dataset generator using Blender and Python scripts. Here’s an overview of the dataset generation process:
+  - **Blender API (Bpy):** Utilized to create and manipulate 3D objects within Blender.
+  - **Python Scripting:** Scripts were written to automate the generation of 3D objects and their corresponding 2D sketches.
+  - **Variations:** The dataset includes:
+    - Objects with no background.
+    - Black outlines of the mesh on a white background.
+    - Colored objects with black outlines and no background.
+  - **Class Balancing:** Ensured the dataset was balanced across different object classes to improve model performance.
 
 ## Installation:
 - First, the user must have Blender Installed.
@@ -47,13 +64,13 @@ This mesh will then be exported so that the user can do what they want with the 
   
 
 ## Contributors:
-  - Judah Smith-Dyer
-  - Rafael Fernandes Da Silva
-  - James Burns
-  - Kliment Behr
+  - Judah Smith-Dyer: Team leader, Full-stack
+  - Rafael Fernandes Da Silva: Team Manager, Artificial Intelligence and Database Developer
+  - James Burns: Mesh Algorithm Developer
+  - Kliment Behr: Embedded Tool Developer
 
 ## Project Status:
-  Pre-alpha
+  Alpha
 
 ## License: 
 MIT License
