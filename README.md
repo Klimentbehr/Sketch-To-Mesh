@@ -23,6 +23,7 @@ The core of Sketch-to-Mesh lies in its advanced AI model, which leverages deep l
   - **Evaluation:** The model achieved a high accuracy rate of 96%, making it reliable for generating precise 3D meshes from 2D sketches.
 
 ### stm-model training, prediction, and dataset generator documentation can be found here: <https://github.com/rfernandesdasilva/stm-model> 
+### Example usage can be found here: <https://www.youtube.com/watch?v=hz0ToCdw5JM>
 
 ## Dataset Generator:
 To train our model effectively, we developed a custom dataset generator using Blender and Python scripts. Here’s an overview of the dataset generation process:
@@ -35,6 +36,23 @@ To train our model effectively, we developed a custom dataset generator using Bl
   - **Class Balancing:** Ensured the dataset was balanced across different object classes to improve model performance.
 
 ### Example dataset used for model training can be found here: <https://www.kaggle.com/datasets/breadzin/3d-geometric-objects-in-2d-plane-sketch-like>
+
+## Computer Vision:
+Another solution that we developed in the application uses computer vision techniques, allowing us to accurately track and reconstruct 3D models from 2D images. Here’s how we achieved this:
+
+  - **OpenCV for Point Tracking:**
+    - Used OpenCV to track points of a red box in the input images.
+    - The tracking algorithm identifies and follows key points within the object across multiple frames.
+    - This tracking provides essential data points for the 3D reconstruction process.
+  - ** Depth Estimation with MiDaS:**
+    - Employed MiDaS, a pre-trained depth estimation model from PyTorch Vision, to estimate the depth of the tracked points.
+    - MiDaS provides high-quality depth maps from the 2D input images.
+    - Depth information is crucial for understanding the spatial relationships and dimensions of the objects.
+  - **3D Reconstruction**:
+    - Combined the tracked points and their depth estimates to reconstruct the 3D coordinates.
+    - This reconstruction allows us to generate accurate 3D meshes that represent the original 2D sketches.
+   
+  ### Example can be found here: <https://www.youtube.com/watch?v=SaFmqvEJB0I> 
 
 ## Installation:
 - First, the user must have Blender Installed.
