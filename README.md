@@ -34,7 +34,7 @@ To train our model effectively, we developed a custom dataset generator using Bl
     - Colored objects with black outlines and no background.
   - **Class Balancing:** Ensured the dataset was balanced across different object classes to improve model performance.
 
-# Example dataset used for model training can be found here: <https://www.kaggle.com/datasets/breadzin/3d-geometric-objects-in-2d-plane-sketch-like>
+### Example dataset used for model training can be found here: <https://www.kaggle.com/datasets/breadzin/3d-geometric-objects-in-2d-plane-sketch-like>
 
 ## Installation:
 - First, the user must have Blender Installed.
