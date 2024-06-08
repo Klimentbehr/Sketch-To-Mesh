@@ -4,9 +4,9 @@ from os import path
 import cv2
 import io
 import tempfile
-from .image_processing import PlaneItem
+from .image_processing import PlaneItem, EditPicture, SaveImage
 from .file_conversion import blend_opener, fbx_opener
-from .DepthByColor import GenerateEdges, NormaliseData, GenerateShapeEdges, GetDistanceBetweenPoints, ColorCheck
+from .DepthByColor import GenerateEdges, NormaliseData, GenerateShapeEdges, GetDistanceBetweenPoints, ColorCheck, ResetNormals, CountVerticesFromCamera, MultipleImagePath
 
 #saveObj
 #Description
@@ -53,16 +53,16 @@ def GetlistOfPixels(PolyCount, ColorWeAreLookingFor, plane:PlaneItem): #(0, 255,
     for iterator in range(5):
         match iterator: # this will loop through the image and gather the green pxiels outlined on each side
             #Right
-            case 0: ImageDictionary[iterator] = FindPixels(PolyCount, ImageRow, ImageColumn, base= 0, iteratorValue= 1, ImageArea = AreaOfImage, image = Image, Color=ColorWeAreLookingFor) 
+            case 0: ImageDictionary[iterator] = FindPixels(PolyCount, ImageRow, ImageColumn, base= 0, iteratorValue= 1, ImageArea = AreaOfImage, image = Image, Color=ColorWeAreLookingFor, plane=plane ,isVertical=False) 
             #Left
-            case 1: ImageDictionary[iterator] = FindPixels(PolyCount, ImageRow, ImageColumn, base= ImageRow, iteratorValue= -1, ImageArea = AreaOfImage, image = Image, Color=ColorWeAreLookingFor)
+            case 1: ImageDictionary[iterator] = FindPixels(PolyCount, ImageRow, ImageColumn, base= ImageRow, iteratorValue= -1, ImageArea = AreaOfImage, image = Image, Color=ColorWeAreLookingFor, plane=plane ,isVertical=False)
             #Middle Right
-            case 2: ImageDictionary[iterator] = FindPixels(PolyCount, ImageRow, ImageColumn, base= HalfImageRow, iteratorValue= 1, ImageArea = AreaOfImage, image = Image, Color=ColorWeAreLookingFor)
+            case 2: ImageDictionary[iterator] = FindPixels(PolyCount, ImageRow, ImageColumn, base= HalfImageRow, iteratorValue= 1, ImageArea = AreaOfImage, image = Image, Color=ColorWeAreLookingFor, plane=plane ,isVertical=False)
             #middle Left
-            case 3: ImageDictionary[iterator] = FindPixels(PolyCount, ImageRow, ImageColumn, base= HalfImageRow, iteratorValue= -1, ImageArea = AreaOfImage, image = Image, Color=ColorWeAreLookingFor)
+            case 3: ImageDictionary[iterator] = FindPixels(PolyCount, ImageRow, ImageColumn, base= HalfImageRow, iteratorValue= -1, ImageArea = AreaOfImage, image = Image, Color=ColorWeAreLookingFor, plane=plane, isVertical=False)
             #Vertical
-            case 4: ImageDictionary[iterator] = FindPixels(PolyCount, ImageRow, ImageColumn, base= HalfImageRow, iteratorValue= 1, ImageArea = AreaOfImage, image = Image, Color=ColorWeAreLookingFor, isVertical=True)
-    return ImageDictionary , ImageData , Image
+            case 4: ImageDictionary[iterator] = FindPixels(PolyCount, ImageRow, ImageColumn, base= HalfImageRow, iteratorValue= 1, ImageArea = AreaOfImage, image = Image, Color=ColorWeAreLookingFor, plane=plane, isVertical=True)
+    return ImageDictionary, ImageData, Image
 
 #FindPixels 
 #Description: Finds green pixels depending on the side selected above. 
@@ -84,9 +84,10 @@ def GetlistOfPixels(PolyCount, ColorWeAreLookingFor, plane:PlaneItem): #(0, 255,
 #Return
 #this function returns the list of pixels found
 
-def FindPixels(PolyCount, ImageRow, ImageColumn, base, iteratorValue, ImageArea, image, Color, isVertical = False):
+def FindPixels(PolyCount, ImageRow, ImageColumn, base, iteratorValue, ImageArea, image, Color, plane:PlaneItem, isVertical):
     PixelList = []
-    row = 0; column = 0
+    VertPixels = []
+    row = 0; column = 0; vertRow = 0
     for points in range(ImageArea):
         if abs(row) >= ImageRow:
             if isVertical: break
@@ -97,8 +98,19 @@ def FindPixels(PolyCount, ImageRow, ImageColumn, base, iteratorValue, ImageArea,
         if ColorCheck(image, (row, column), Color):
             PixelList.append((row, column)) #If the pixel list is empty then it is the first pixel to be added
             if isVertical:
-                if (row + PolyCount) > ImageRow : break 
-                else: row = row + PolyCount; column = base
+                if (row + PolyCount) > ImageRow : break
+                else: 
+                    vertRow = row - 1
+                    while (int(image[vertRow, column][0]), int(image[vertRow, column][1]), int(image[vertRow, column][2])) == Color:
+                        vertRow = vertRow - 1
+                    VertPixels.append((vertRow, column))
+                    vertRow = vertRow + PolyCount
+                    while (int(image[vertRow, column][0]), int(image[vertRow, column][1]), int(image[vertRow, column][2])) == Color:
+                        VertPixels.append((vertRow, column))
+                        vertRow = vertRow + PolyCount
+                        EditPicture((0, 255, 200), (row, column), image)
+                    SaveImage(image, plane.ImagePlaneFilePath, "View0")
+                    row = row + PolyCount; column = base
             else:
                 if (column + PolyCount) > ImageColumn : break 
                 else: column = column + PolyCount; row = base
@@ -301,14 +313,17 @@ def DrawMeshToScreen(MeshStructure, self, CollectionName = "Sketch_to_Mesh_Colle
             edges = MeshStructure[1] # Define edges here based on your vertices
             new_mesh.from_pydata(MeshStructure[0], edges, MeshStructure[1])
             new_mesh.update()
-
         # make object from mesh
         new_object = bpy.data.objects.new('Sketch_to_Mesh_mesh', new_mesh)
+
         # make collection
-        new_collection = bpy.data.collections.new(CollectionName)
-        bpy.context.scene.collection.children.link(new_collection)
+        collection = bpy.data.collections.get(CollectionName)
+        if collection == None:
+            collection = bpy.data.collections.new(CollectionName)
+            bpy.context.scene.collection.children.link(collection)
         # add object to scene collection
-        new_collection.objects.link(new_object)
+        collection.objects.link(new_object)
+        ResetNormals(CollectionName)
 
 
 #DrawMesh
@@ -321,31 +336,42 @@ def DrawMeshToScreen(MeshStructure, self, CollectionName = "Sketch_to_Mesh_Colle
 #PlaneArray: This is the list of planes used for mesh creation
 #isComplex: thhis tells us if we are making a complex image or not
 
-def DrawMesh(ColorWeAreLookingFor, PolyCount, self, PlaneArray:list[PlaneItem], isComplex):
+def DrawMesh(ColorWeAreLookingFor, PolyCount, self, PlaneArray: list[PlaneItem], isComplex):
+    counter = 0
+    MeshStructure = {}
     for plane in PlaneArray:
-        if isComplex == True: #only happens when complex is called
+        if isComplex == True:
+            # Processing for complex images
             ImageDictionary, Imagedata, Image = GetlistOfPixels(PolyCount, ColorWeAreLookingFor, plane)
             VertList = NormaliseVertList(ImageDictionary)
-
-            if VertList == False:  return False #ends the function before any extra work is done
+            if VertList is False:
+                self.report({'ERROR'}, "Invalid Image")
+                continue  # Skip processing if normalization fails
             MeshStructure = GenerateEdges(VertList, "BlenderPoints")
-
-            DrawMeshToScreen(MeshStructure, self, "Sketch_To_Mesh_Collection") # this is the outline of the mesh
-            PixelLineDictionary= GetLineOfPixels(ImageDictionary[0], Imagedata, Image, ColorWeAreLookingFor)
+            DrawMeshToScreen(MeshStructure, self, "Sketch_To_Mesh_Collection")
+            PixelLineDictionary = GetLineOfPixels(ImageDictionary[0], Imagedata, Image, ColorWeAreLookingFor)
             MeshStructureLibrary = DefineDictioniesForColorsLines(PixelLineDictionary)
             DrawMeshToScreen(MeshStructureLibrary[0], self, "Sketch_To_Mesh_Collection")
-        else: 
-            MeshStructure = GenerateShapeEdges(PolyCount, plane, ColorWeAreLookingFor) #only called when not complex is called
-            DrawMeshToScreen(MeshStructure, self) #draws all the meshes to screen
-           
-# TODO: return something that is not 0. case handling and error handling, as well as completed and noncompleted states.
+            break #temp break    
+        else:
+            # Processing for simple images
+            if counter < 1: MeshStructure, EdgeData = GenerateShapeEdges(PolyCount, plane, ColorWeAreLookingFor)
+            else: MeshStructure = MultipleImagePath(MeshStructure, EdgeData, PolyCount, plane, ColorWeAreLookingFor)
+            for ImageValues in range(3):
+                CurrPath = os.path.abspath("ImageFolder\\" + "View" + str(ImageValues) + plane.PlaneFilepath[plane.PlaneFilepath.rfind("."): ] )
+                if path.exists(CurrPath): os.remove(CurrPath) # if we find that file we will delete it
+        counter += 1
+        break #temp break
+        
+    if MeshStructure: DrawMeshToScreen(MeshStructure, self)
+    else: self.report({'ERROR'}, "Invalid Image")
+
 def encode_file(file_path):
     
    with open(file_path, "rb") as file:
         blend_file_contents = io.BytesIO(file.read())
         return blend_file_contents
 
-# TODO: return something that is not 0. case handling and error handling, as well as completed and noncompleted states.
 def decode_file(data, file_extension):
     #Apparently the data doesn't need to be decoded so we will handle the different
     #file extensions handled here instead of outside the file_conversion.py file
@@ -357,12 +383,9 @@ def decode_file(data, file_extension):
 
     #Deal with the separate file extensions
     match file_extension :
-        case ".blend":
-            blend_opener(temp_file.name)
-        case ".fbx":
-            fbx_opener(temp_file.name)
-        case _: #defualt case # if there is an image file
-            bpy.ops.import_image.to_plane(files=[{"name":temp_file.name, "name":temp_file.name}], directory="", relative=False)
+        case ".blend": blend_opener(temp_file.name)
+        case ".fbx":fbx_opener(temp_file.name)
+        case _:  bpy.ops.import_image.to_plane(files=[{"name":temp_file.name, "name":temp_file.name}], directory="", relative=False)#defualt case # if there is an image file
 
     #remove the temp file
     os.unlink(temp_file.name)
@@ -392,17 +415,15 @@ def SearchForClosestPoint(PointArray, startingPoint ):
 
 
 def ResetImage(GlobalPlaneDataArray:list[PlaneItem]):
-    Itervalue = 0
 
     for plane_data in GlobalPlaneDataArray :
         #Finds the Images Saved
-        ImageFilePaths = []
-        for ImageValues in range(3):
-            ImageFilePaths.append(os.path.abspath("ImageFolder\\" + "View" + str(ImageValues) + plane_data.PlaneFilepath[plane_data.PlaneFilepath.rfind("."): ] ))
-            if path.exists(ImageFilePaths[ImageValues]): os.remove(ImageFilePaths[ImageValues]) # if we find that file we will delete it
-            
-        bpy.data.objects[plane_data.ImagePlaneName].select_set(True)# selects the image plane in the array 
-        bpy.ops.object.delete(use_global=False, confirm=False)#deletes the image plane in the array 
-        Itervalue = Itervalue + 1 #increases the itervalue to reach the next View string
+        if plane_data.ImagePlaneName != "":
+
+            ImageFilePaths = []
+            for ImageValues in range(3):
+                ImageFilePaths.append(os.path.abspath("ImageFolder\\" + "View" + str(ImageValues) + plane_data.PlaneFilepath[plane_data.PlaneFilepath.rfind("."): ] ))
+                if path.exists(ImageFilePaths[ImageValues]): os.remove(ImageFilePaths[ImageValues]) # if we find that file we will delete it
     # clears the PlaneData Array
     GlobalPlaneDataArray.clear() 
+

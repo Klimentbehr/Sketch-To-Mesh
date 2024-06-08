@@ -2,19 +2,34 @@ import cv2
 import os
 import numpy as np
 import bpy
-import random
 from dataclasses import dataclass
 
 @dataclass
 class PlaneItem:
     PlaneFilepath = bpy.props.StringProperty(name="File Path",subtype='FILE_PATH')
     PlaneRotation = bpy.props.IntProperty(name="Rotation", default=0)
-    ImagePlaneName: str
-    ImagePlaneFilePath: str
+    ImagePlaneName= ""
+    ImagePlaneFilePath= ""
+    top = (0,90,0)
+    bottom = (0,270,0)
+    front = (0,0,0)
+    sideR = (90,0,0)
+    back = (180,0,0)
+    sideL = (270,0,0)
+    currFace = front
     
     def __init__(self, filepath ,rotation):
         self.PlaneFilepath = filepath
         self.PlaneRotation = rotation
+        
+def fix_path(self, PlaneDataArray : list[PlaneItem]):
+    path = ''
+    if(PlaneDataArray.__len__() >= 1):
+        for PlaneData in PlaneDataArray:
+            path = PlaneData.PlaneFilepath
+            break
+
+    return path
 
 # this will be called once the images are ready
 def prepare_image(image_path):
@@ -137,7 +152,7 @@ def mark_corners(image_path, max_corners=100):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
     # Detect corners
-    corners = cv2.goodFeaturesToTrack(gray, maxCorners=max_corners, qualityLevel=0.01, minDistance=10)
+    corners = cv2.goodFeaturesToTrack(gray, maxCorners=10, qualityLevel=0.01, minDistance=10)
     
     cornerArray = []
     # Refine the corner locations
@@ -146,9 +161,9 @@ def mark_corners(image_path, max_corners=100):
         for corner in corners:
             x, y = corner.ravel()
             cornerArray.append((y, x))
-            #EditPicture((255, 0, 0), (y,x), image)
+            EditPicture((255, 0, 0), (y,x), image)
             cv2.circle(image, (x, y), 3, (255, 0, 0), -1)
-    #SaveImage(image, image_path, "View1")
+    SaveImage(image, image_path, "View1")
     return cornerArray, image.shape
 
 #     # did i really just use math here
@@ -285,26 +300,28 @@ def PlaceImage(self, GlobalPlaneDataArray:list[PlaneItem] ):
                 #this creates a new file path to the image we just saved
                 plane_data.ImagePlaneFilePath = os.path.abspath(ImageDiretoryForNewImage + "\\" + plane_data.ImagePlaneName + Extension) 
                 
-                if plane_data.ImagePlaneFilePath:
-                    filename = os.path.basename(plane_data.ImagePlaneFilePath)
-                    FileDirectory = r"" + plane_data.ImagePlaneFilePath[: plane_data.ImagePlaneFilePath.rfind("\\")] + "\\"
-                    #bpy.ops.import_image.to_plane(files=[{"name":filename, "name":filename}], directory=FileDirectory, relative=False)
-                    bpy.ops.import_image.to_plane(files=[{"name":filename, "name":filename}], directory=FileDirectory, relative=False)
-                    #we set the rotation and location of each plane
-                    bpy.data.objects[plane_data.ImagePlaneName].select_set(True)
-                    match Itervalue :
-                        case 1: bpy.ops.transform.translate(value=(-0.01, 0 , 0), orient_type='GLOBAL', orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type='GLOBAL', constraint_axis=(False, True, False), mirror=False, use_proportional_edit=False, proportional_edit_falloff='SMOOTH', proportional_size=1, use_proportional_connected=False, use_proportional_projected=False, snap=False, snap_elements={'INCREMENT'}, use_snap_project=False, snap_target='CLOSEST', use_snap_self=True, use_snap_edit=True, use_snap_nonedit=True, use_snap_selectable=False, alt_navigation=True)
-                        case 2: bpy.context.object.rotation_euler[2] = 0
-                else:
-                    match Itervalue:
-                        case 0: MissingView = "FrontView"
-                        case 1: MissingView = "BackView"
-                        case 2: MissingView = "SideView"
-                    self.report({'ERROR'}, "No inputted Image for" + MissingView)
-                Itervalue = Itervalue + 1
+                #bpy.ops.import_image.to_plane(files=[{"name":filename, "name":filename}], directory=FileDirectory, relative=False)
             else:
                 self.report({'ERROR'}, "No inputted Image.")
                 Itervalue = Itervalue + 1
+
+
+def PlaceSingluarImage(plane_data:PlaneItem ):
+    #this will keep count of the views were have captured
+    Itervalue = 0
+    #this will be a folder in the sketch-to-Mesh project. This will hold the Image processed
+    ImageDiretoryForNewImage = "ImageFolder"
+    
+    if plane_data :
+        #this is used for the new image. We want to save the new image as the same type of file as the first
+        Extension =  plane_data.PlaneFilepath[plane_data.PlaneFilepath.rfind("."): ] 
+        plane_data.ImagePlaneName = "View" + str(Itervalue) #this is the file name for the image we are creating
+        # allows us to access the plane after creation
+        outline_image(plane_data.PlaneFilepath, Extension, plane_data.ImagePlaneName, ImageDiretoryForNewImage)
+        #this creates a new file path to the image we just saved
+        plane_data.ImagePlaneFilePath = os.path.abspath(ImageDiretoryForNewImage + "\\" + plane_data.ImagePlaneName + Extension) 
+        #bpy.ops.import_image.to_plane(files=[{"name":filename, "name":filename}], directory=FileDirectory, relative=False)
+    return plane_data
 
 def Feature_detection(self, PlaneDataArray : list[PlaneItem]):
     KeyPoints: list = []
@@ -369,4 +386,5 @@ def SaveImage(image, filepath:str, filename:str):
     os.chdir("ImageFolder") #changes the directory to the folder where we are going to save the file
     cv2.imwrite(filename + Extension, image ) #saves the image
     os.chdir("..\\") #goes back one directory   
+
 

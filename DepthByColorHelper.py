@@ -1,6 +1,6 @@
 import math
 import cv2
-from .image_processing import PlaneItem, EditPicture, SaveImage
+from .image_processing import PlaneItem, EditPicture, SaveImage, PlaceSingluarImage
 from dataclasses import dataclass
 
 @dataclass
@@ -25,7 +25,7 @@ class ImageDataClass:
 
     def __init__(self, radius, plane:PlaneItem, Color):
         self.radius = radius
-        self.plane = plane
+        self.plane = PlaceSingluarImage(plane)
         self.Color = Color
         self.image = cv2.imread(plane.ImagePlaneFilePath)
         self.ImageShape = (self.image.shape[0]-1, self.image.shape[1]-1)
@@ -48,8 +48,10 @@ def CheckForInsideLines(imagedataClass:ImageDataClass, EdgeList:dict):
 
     for Edgepoint in EdgeList: #we loop through the edgePoints. We are looking for a point with 3 or more lines connected to it. This point cannot be a edgePoint
         lastPointOnLine = CheckLineDst(Edgepoint, EdgeList, imagedataClass) #this will get all the points in a line till it gets to an EdgePoint or till it get 3 or more lines connected it
-        if EdgeList.get(lastPointOnLine): lastEdgePoint = lastPointOnLine; continue #if we get a EdgePoint we go to the point EdgePoint in the list
-        else: AdjacentPointList.append(lastPointOnLine) #if we don't get an EdgePoint we add it to the list of AdjcentPoints
+        if EdgeList.get(lastPointOnLine): 
+            lastEdgePoint = lastPointOnLine; continue #if we get a EdgePoint we go to the point EdgePoint in the list
+        else: 
+            AdjacentPointList.append(lastPointOnLine) #if we don't get an EdgePoint we add it to the list of AdjcentPoints
 
     CondensedAdjacentPoints = GetPointsWithinRadius(AdjacentPointList, imagedataClass.radius) #this will combine all of the point in the Adjcent list that are close
     AdjacentPoint = GetAverageOfAllCoordinateValuesInList(CondensedAdjacentPoints) #this will combine all of the points in the list
@@ -116,7 +118,7 @@ def GetLinesAroundAdjancentPoint(CenterPoint, lastEdgePoint, imagedataClass:Imag
     
     for points in NextPointsToCheck: 
         if points[1] < CenterPoint[1]: SurrondingEdgePoints.append(CheckLineDst(points, EdgeList, imagedataClass, Reverse=True))
-        else: SurrondingEdgePoints.append(CheckLineDst(points, EdgeList, imagedataClass))
+        else: SurrondingEdgePoints.append((CheckLineDst(points, EdgeList, imagedataClass)))
     
     return SurrondingEdgePoints
 
@@ -166,9 +168,9 @@ def CheckLineDst(Centerpoint, EdgeList, imagedataClass:ImageDataClass, Reverse=F
         NextPointsToCheck = CondensePointsForCircle(Circlelist, imagedataClass)
 
         #for colored circles
-        #for points in Circlelist: EditPicture((173, 2, 100), points, imagedataClass.image)
-        #for points in NextPointsToCheck: EditPicture((173, 2, 100), points, imagedataClass.image)
-        #SaveImage(imagedataClass.image, imagedataClass.plane.ImagePlaneFilePath, "View3")
+        for points in Circlelist: EditPicture((173, 2, 100), points, imagedataClass.image)
+        for points in NextPointsToCheck: EditPicture((173, 2, 100), points, imagedataClass.image)
+        SaveImage(imagedataClass.image, imagedataClass.plane.ImagePlaneFilePath, "View2")
         
         if Reverse == True:
             DeterminigValue = (100000, (0,0))
@@ -188,7 +190,7 @@ def CheckLineDst(Centerpoint, EdgeList, imagedataClass:ImageDataClass, Reverse=F
         
         if NextPointsToCheck.__len__() >= 3:
             Adjacentpoint = GetAverageOfAllCoordinateValuesInList(NextPointsToCheck)#if this is not an edgePoint and has less that three lines coming from it we want to find the next point over
-            Adjacentpoint = ((round(Adjacentpoint[0]), round(Adjacentpoint[1])))
+            Adjacentpoint = (round(Adjacentpoint[0]), round(Adjacentpoint[1]))
             break 
         else: Centerpoint = DeterminigValue[1]# we move on to the next point
     return Adjacentpoint
@@ -240,7 +242,7 @@ def GetPointsWithinRadius(pointsList:list, Radius):
 
 #Return:
 #CirclePoints: these are the points making the circle
-def getCircle(center:list, image, Radius = 1, isQuaded = False):
+def getCircle(center:list, image, Radius = 1, isQuaded = False, isNotWithinShape = False):
     #Orders the points in the circle
     imageShape = image.shape
     CirclePointsRT = []
@@ -263,13 +265,13 @@ def getCircle(center:list, image, Radius = 1, isQuaded = False):
         for Xvalue in range(Radius):
             Xpoint = center[0] + Xvalue
             Yvalue = round(math.sqrt(Radius**2 - (Xpoint - center[0])**2))
-            if (center[0]+Xvalue < imageShape[0]) and center[1]+Yvalue < imageShape[1] :
+            if (center[0]+Xvalue < imageShape[0]) and center[1]+Yvalue < imageShape[1] or isNotWithinShape:
                 CircleCoord = (center[0]+Xvalue, center[1]+Yvalue); CirclePointsRT.append(CircleCoord)
-            if (center[0]-Xvalue > 0) and (center[1]+Yvalue < imageShape[1]) :
+            if (center[0]-Xvalue > 0) and (center[1]+Yvalue < imageShape[1]) or isNotWithinShape:
                 CircleCoord = (center[0]-Xvalue, center[1]+Yvalue ); CirclePointsRB.append(CircleCoord)
-            if (center[1]+Xvalue < imageShape[0]) and (center[1]-Yvalue > 0) :
+            if (center[1]+Xvalue < imageShape[0]) and (center[1]-Yvalue > 0) or isNotWithinShape:
                 CircleCoord = (center[0]+Xvalue, center[1]-Yvalue); CirclePointsLB.append(CircleCoord)
-            if (center[1]-Xvalue > 0) and (center[1]-Yvalue > 0) :
+            if (center[1]-Xvalue > 0) and (center[1]-Yvalue > 0) or isNotWithinShape:
                 CircleCoord = (center[0]-Xvalue, center[1]-Yvalue); CirclePointsLT.append(CircleCoord)
     
     ReversedRT = CirclePointsRT[::-1]
@@ -566,5 +568,3 @@ def GetClosetPointsToValue(PointList:list, ValueList:list):
                 ActivePoints.append(points)
     ActivePoints = GetUniquePoints(ActivePoints)
     return ActivePoints
-
-
