@@ -22,7 +22,7 @@ The core of Sketch-to-Mesh lies in its advanced AI model, which leverages deep l
   - **Data Augmentation:** To improve the model's performance, extensive data augmentation techniques were applied to the training dataset, including transformations like rotation, scaling, and color adjustments.
   - **Evaluation:** The model achieved a high accuracy rate of 96%, making it reliable for generating precise 3D meshes from 2D sketches.
 
-stm-model training, prediction, and dataset generator documentation can be found here: <https://github.com/rfernandesdasilva/stm-model> 
+# stm-model training, prediction, and dataset generator documentation can be found here: <https://github.com/rfernandesdasilva/stm-model> 
 
 ## Dataset Generator:
 To train our model effectively, we developed a custom dataset generator using Blender and Python scripts. Here’s an overview of the dataset generation process:
@@ -33,6 +33,8 @@ To train our model effectively, we developed a custom dataset generator using Bl
     - Black outlines of the mesh on a white background.
     - Colored objects with black outlines and no background.
   - **Class Balancing:** Ensured the dataset was balanced across different object classes to improve model performance.
+
+# Example dataset used for model training can be found here: <https://www.kaggle.com/datasets/breadzin/3d-geometric-objects-in-2d-plane-sketch-like>
 
 ## Installation:
 - First, the user must have Blender Installed.
