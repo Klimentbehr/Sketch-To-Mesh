@@ -7,11 +7,11 @@ This mesh will then be exported so that the user can do what they want with the 
 
 ## Technologies:
   - bcrypt
-  - open CV
+  - OpenCV
+  - Pytorch Vision (Depth Estimation)
+  - Tensorflow Keria (CNN model object prediction)
   - bpy (Blender Python Library)
   - pymongo
-  - tensorflow
-  - pytorch
 
 ## Features: 
   Sketch-To-Mesh takes in multiple images and then outputs a mesh based on those images.
