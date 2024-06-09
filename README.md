@@ -35,7 +35,7 @@ To train our model effectively, we developed a custom dataset generator using Bl
     - Colored objects with black outlines and no background.
   - **Class Balancing:** Ensured the dataset was balanced across different object classes to improve model performance.
 
-### Example dataset used for model training can be found here: <https://www.kaggle.com/datasets/breadzin/3d-geometric-objects-in-2d-plane-sketch-like>
+### Example dataset we created for model training can be found here: <https://www.kaggle.com/datasets/breadzin/3d-geometric-objects-in-2d-plane-sketch-like>
 
 ## Computer Vision:
 Another solution that we developed in the application uses computer vision techniques, allowing us to accurately track and reconstruct 3D models from 2D images. Here’s how we achieved this:
