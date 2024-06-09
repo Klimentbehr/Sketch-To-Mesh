@@ -44,7 +44,7 @@ Another solution that we developed in the application uses computer vision techn
     - Used OpenCV to track points of a red box in the input images.
     - The tracking algorithm identifies and follows key points within the object across multiple frames.
     - This tracking provides essential data points for the 3D reconstruction process.
-  - ** Depth Estimation with MiDaS:**
+  - **Depth Estimation with MiDaS:**
     - Employed MiDaS, a pre-trained depth estimation model from PyTorch Vision, to estimate the depth of the tracked points.
     - MiDaS provides high-quality depth maps from the 2D input images.
     - Depth information is crucial for understanding the spatial relationships and dimensions of the objects.
