@@ -43,22 +43,27 @@ class EdgeData:
 def GenerateShapeEdges(radius:int, plane:PlaneItem, ColorToLookFor):
     imageDataClass = ImageDataClass(radius, plane, ColorToLookFor)
     
-    FinishedList =[]
+    FinishedList = []
     SizedEdgePoints, MulipliersValues, imageShape = GetPointsFromImage(imageDataClass.image, plane, imageDataClass.ImageShape[0], imageDataClass.ImageShape[1], radius)
     imageDataClass.__setattr__('ImageShape', imageShape)
     imageDataClass.__setattr__('image', cv2.resize(imageDataClass.image, (imageDataClass.ImageShape[1], imageDataClass.ImageShape[0])))
-    for points in SizedEdgePoints: FinishedList.append((round(points[0] / MulipliersValues[0]), round(points[1] / MulipliersValues[1])))
+    for points in SizedEdgePoints:
+        FinishedList.append((round(points[0] / MulipliersValues[0]), round(points[1] / MulipliersValues[1])))
     
-
-
-
     for points in FinishedList:
         EditPicture((0,0,0), points, imageDataClass.image)
         SaveImage(imageDataClass.image, plane.ImagePlaneFilePath, "View0")
- 
+    
     EdgeDataList = CreateEdgeData(FinishedList, imageDataClass)
     EdgeDataList = CalculateLocationsOfAvaliblePixelsAroundPoint(EdgeDataList, imageDataClass)
     outputlist = CycleThroughEdgePointsForColor(EdgeDataList, imageDataClass)
+    
+    # Update global counts
+    global global_edge_data_count
+    global global_adjacent_points_count
+    global_edge_data_count = len(EdgeDataList)
+    global_adjacent_points_count = len(AdjacentPoint.AdjacentLine)
+    
     return outputlist
 
 #GetPointsFromImage
