@@ -84,10 +84,13 @@ Another solution that we developed in the application uses computer vision techn
   
 
 ## Contributors:
-  - Judah Smith-Dyer: Team leader, Full-stack
-  - Rafael Fernandes Da Silva: Team Manager, Artificial Intelligence and Database Developer
-  - James Burns: Mesh Algorithm Developer
-  - Kliment Behr: Embedded Tool Developer
+  Alpha 2.0 :
+    - Kell Behr
+  Alpha 1.0 :
+    - Judah Smith-Dyer: Team leader, Full-stack
+    - Rafael Fernandes Da Silva: Team Manager, Artificial Intelligence and Database Developer
+    - James Burns: Mesh Algorithm Developer
+    - Kell Behr: Embedded Tool Developer
 
 ## Project Status:
   Alpha
