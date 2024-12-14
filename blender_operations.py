@@ -335,23 +335,28 @@ def DrawMeshToScreen(MeshStructure, self, CollectionName = "Sketch_to_Mesh_Colle
 #PlaneArray: This is the list of planes used for mesh creation
 #isComplex: thhis tells us if we are making a complex image or not
 
-def DrawMesh(ColorWeAreLookingFor, PolyCount, self, PlaneArray:list[PlaneItem], isComplex):
+def DrawMesh(ColorWeAreLookingFor, PolyCount, self, PlaneArray: list[PlaneItem], isComplex):
     for plane in PlaneArray:
-        if isComplex == True: #only happens when complex is called
+        if isComplex == True:
+            # Processing for complex images
             ImageDictionary, Imagedata, Image = GetlistOfPixels(PolyCount, ColorWeAreLookingFor, plane)
             VertList = NormaliseVertList(ImageDictionary)
-
-            if VertList == False:  return False #ends the function before any extra work is done
+            if VertList is False:
+                self.report({'ERROR'}, "Invalid Image")
+                continue  # Skip processing if normalization fails
             MeshStructure = GenerateEdges(VertList, "BlenderPoints")
-
-            DrawMeshToScreen(MeshStructure, self, "Sketch_To_Mesh_Collection") # this is the outline of the mesh
-            PixelLineDictionary= GetLineOfPixels(ImageDictionary[0], Imagedata, Image, ColorWeAreLookingFor)
+            DrawMeshToScreen(MeshStructure, self, "Sketch_To_Mesh_Collection")
+            PixelLineDictionary = GetLineOfPixels(ImageDictionary[0], Imagedata, Image, ColorWeAreLookingFor)
             MeshStructureLibrary = DefineDictioniesForColorsLines(PixelLineDictionary)
             DrawMeshToScreen(MeshStructureLibrary[0], self, "Sketch_To_Mesh_Collection")
-        else: 
-            MeshStructure = GenerateShapeEdges(PolyCount, plane, ColorWeAreLookingFor) #only called when not complex is called
-            DrawMeshToScreen(MeshStructure, self) #draws all the meshes to screen
-           
+        else:
+            # Processing for simple images
+            MeshStructure = GenerateShapeEdges(PolyCount, plane, ColorWeAreLookingFor)
+            if MeshStructure:
+                DrawMeshToScreen(MeshStructure, self)
+            else:
+                self.report({'ERROR'}, "Invalid Image")
+
 # TODO: return something that is not 0. case handling and error handling, as well as completed and noncompleted states.
 def encode_file(file_path):
     
